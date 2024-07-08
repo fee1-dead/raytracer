@@ -9,6 +9,7 @@ mod color;
 mod interval;
 mod object;
 mod ray;
+mod utils;
 pub(crate) mod vec3;
 
 fn main() -> io::Result<()> {
@@ -24,7 +25,7 @@ fn main() -> io::Result<()> {
     });
 
     // camera
-    let camera = Camera::new(16.0 / 9.0, 400);
+    let camera = Camera::new(16.0 / 9.0, 400, 100);
     camera.render(world)?;
 
     Ok(())

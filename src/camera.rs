@@ -4,6 +4,7 @@ use crate::color::Color;
 use crate::interval::Interval;
 use crate::object::{Object, ObjectList};
 use crate::ray::Ray;
+use crate::utils::random_double;
 use crate::vec3::{vec3, Point, Vec3};
 
 pub struct Camera {
@@ -12,11 +13,13 @@ pub struct Camera {
     pixel00_loc: Point,
     pixel_delta_u: Vec3,
     pixel_delta_v: Vec3,
+    samples_per_pixel: u64,
+    pixel_samples_scale: f64,
     center: Point,
 }
 
 impl Camera {
-    pub fn new(aspect_ratio: f64, image_width: u64) -> Camera {
+    pub fn new(aspect_ratio: f64, image_width: u64, samples_per_pixel: u64) -> Camera {
         let image_height = (image_width as f64 / aspect_ratio) as u64;
         let image_height = image_height.max(1);
         let focal_length = 1.0;
@@ -42,6 +45,8 @@ impl Camera {
             pixel00_loc,
             pixel_delta_u,
             pixel_delta_v,
+            samples_per_pixel,
+            pixel_samples_scale: 1.0 / samples_per_pixel as f64,
             center,
         }
     }
@@ -53,25 +58,42 @@ impl Camera {
             center,
             pixel_delta_u,
             pixel_delta_v,
+            samples_per_pixel,
+            pixel_samples_scale,
         } = self;
         println!("P3\n{image_width} {image_height}\n255");
 
         for j in 0..image_height {
             eprint!("\rScanlines remianing: {}", image_height - j);
             for i in 0..image_width {
-                let pixel_center =
-                    pixel00_loc + (pixel_delta_u * i as f64) + (pixel_delta_v * j as f64);
-                let ray_direction = pixel_center - center;
-                let ray = Ray {
-                    origin: center,
-                    direction: ray_direction,
-                };
-                let color = self.ray_color(ray, &world);
-                color.write_to(&mut stdout())?;
+                let mut pixel_color = Color::new(0.0, 0.0, 0.0);
+                for _ in 0..self.samples_per_pixel {
+                    let ray = self.get_ray(i, j);
+                    pixel_color += self.ray_color(ray, &world);
+                }
+                (pixel_samples_scale * pixel_color).write_to(&mut stdout())?;
             }
         }
         eprint!("\rDone.                             \n");
         Ok(())
+    }
+    /// A ray originating from the origin and directed at a random point around
+    /// the pixel located at i, j.
+    pub fn get_ray(&self, i: u64, j: u64) -> Ray {
+        let (offset_x, offset_y) = Self::sample_square();
+        let pixel_sample = self.pixel00_loc
+            + ((i as f64 + offset_x) * self.pixel_delta_u)
+            + ((j as f64 + offset_y) * self.pixel_delta_v);
+        let origin = self.center;
+        let direction = pixel_sample - origin;
+        Ray {
+            origin,
+            direction,
+        }
+    }
+    /// vector to a random point in the square from (-0.5, -0.5) to (0.5, 0.5)
+    pub fn sample_square() -> (f64, f64) {
+        (random_double() - 0.5, random_double() - 0.5)
     }
     pub fn ray_color(&self, r: Ray, world: &ObjectList) -> Color {
         if let Some(record) = world.hit(r, Interval::new(0.0, f64::INFINITY)) {
