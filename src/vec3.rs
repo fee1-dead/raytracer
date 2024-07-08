@@ -1,5 +1,7 @@
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 
+use crate::utils::{random_double, random_double_in};
+
 pub trait Vec3Token {
     type Data: Copy
         + Mul<Output = Self::Data>
@@ -45,14 +47,47 @@ impl<Token: Vec3Token> Vec3<Token> {
     }
 }
 
-// TODO could introduce num to make this generic
 impl<Token: Vec3Token<Data = f64>> Vec3<Token> {
-    pub fn length(self) -> Token::Data {
+    pub fn length(self) -> f64 {
         self.length_squared().sqrt()
     }
 
     pub fn unit_vector(self) -> Self {
         self / self.length()
+    }
+
+    pub fn random() -> Self {
+        Self(random_double(), random_double(), random_double())
+    }
+
+    pub fn random_in(min: f64, max: f64) -> Self {
+        Self(
+            random_double_in(min, max),
+            random_double_in(min, max),
+            random_double_in(min, max),
+        )
+    }
+
+    pub fn random_in_unit_sphere() -> Self {
+        loop {
+            let p = Self::random_in(-1.0, 1.0);
+            if p.length_squared() < 1.0 {
+                return p;
+            }
+        }
+    }
+
+    pub fn random_unit_vector() -> Self {
+        Self::random_in_unit_sphere().unit_vector()
+    }
+
+    pub fn random_on_hemisphere(normal: Self) -> Self {
+        let on_unit_sphere = Self::random_unit_vector();
+        if on_unit_sphere.dot(normal) > 0.0 {
+            on_unit_sphere
+        } else {
+            -on_unit_sphere
+        }
     }
 }
 

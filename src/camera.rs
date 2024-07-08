@@ -54,12 +54,8 @@ impl Camera {
         let Camera {
             image_width,
             image_height,
-            pixel00_loc,
-            center,
-            pixel_delta_u,
-            pixel_delta_v,
-            samples_per_pixel,
             pixel_samples_scale,
+            ..
         } = self;
         println!("P3\n{image_width} {image_height}\n255");
 
@@ -86,10 +82,7 @@ impl Camera {
             + ((j as f64 + offset_y) * self.pixel_delta_v);
         let origin = self.center;
         let direction = pixel_sample - origin;
-        Ray {
-            origin,
-            direction,
-        }
+        Ray { origin, direction }
     }
     /// vector to a random point in the square from (-0.5, -0.5) to (0.5, 0.5)
     pub fn sample_square() -> (f64, f64) {
@@ -97,12 +90,9 @@ impl Camera {
     }
     pub fn ray_color(&self, r: Ray, world: &ObjectList) -> Color {
         if let Some(record) = world.hit(r, Interval::new(0.0, f64::INFINITY)) {
+            let direction = Point::random_on_hemisphere(record.normal);
             return 0.5
-                * Color::new(
-                    record.normal.0 + 1.0,
-                    record.normal.1 + 1.0,
-                    record.normal.2 + 1.0,
-                );
+                * self.ray_color(Ray { origin: record.point, direction }, world);
         }
         let unit = r.direction.unit_vector();
         let a = 0.5 * (unit.1 + 1.0);
