@@ -135,7 +135,7 @@ impl Camera {
         if depth == 0 {
             return Color::new(0.0, 0.0, 0.0);
         }
-        if let Some(record) = world.hit(r, Interval::new(0.0, f64::INFINITY)) {
+        if let Some(record) = world.hit(r, Interval::new(0.001, f64::INFINITY)) {
             let direction = Point::random_on_hemisphere(record.normal);
             let color = self.ray_color(
                 Ray {
