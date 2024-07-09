@@ -1,6 +1,6 @@
 use std::io;
 
-use camera::Camera;
+use camera::{Camera, CameraBuilder};
 use object::{ObjectList, Sphere};
 use vec3::Point;
 
@@ -25,7 +25,12 @@ fn main() -> io::Result<()> {
     });
 
     // camera
-    let camera = Camera::new(16.0 / 9.0, 400, 100);
+    let camera = CameraBuilder::new()
+        .aspect_ratio(16.0 / 9.0)
+        .image_width(400)
+        .samples_per_pixel(100)
+        .max_depth(50)
+        .build();
     camera.render(world)?;
 
     Ok(())
