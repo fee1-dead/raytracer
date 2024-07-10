@@ -89,6 +89,22 @@ impl<Token: Vec3Token<Data = f64>> Vec3<Token> {
             -on_unit_sphere
         }
     }
+
+    pub fn near_zero(self) -> bool {
+        let s = 1e-8;
+        self.0.abs() < s && self.1.abs() < s && self.2.abs() < s
+    }
+
+    pub fn reflect(self, normal: Self) -> Self {
+        self - 2.0 * self.dot(normal) * normal
+    }
+
+    pub fn refract(self, normal: Self, etai_over_etat: f64) -> Self {
+        let cos_theta = (-self).dot(normal).min(1.0);
+        let r_out_perp = etai_over_etat * (self + cos_theta*normal);
+        let r_out_parallel = -(1.0 - r_out_perp.length_squared()).abs().sqrt() * normal;
+        r_out_perp + r_out_parallel
+    }
 }
 
 pub type Point = Vec3<GeometryToken>;
@@ -116,6 +132,7 @@ macro_rules! impl_binop {
 
 impl_binop!(+, Add, add);
 impl_binop!(-, Sub, sub);
+impl_binop!(*, Mul, mul);
 
 macro_rules! impl_binop_assign {
     ($token:tt, $Trait:ident, $fn_name:ident) => {
@@ -134,9 +151,9 @@ impl_binop_assign!(-=, SubAssign, sub_assign);
 
 macro_rules! impl_scalar_op {
     ($token:tt, $Trait:ident, $fn_name:ident) => {
-        impl<T: Vec3Token> $Trait<T::Data> for Vec3<T> {
+        impl<T: Vec3Token<Data = f64>> $Trait<f64> for Vec3<T> {
             type Output = Self;
-            fn $fn_name(self, other: T::Data) -> Self {
+            fn $fn_name(self, other: f64) -> Self {
                 Self(self.0 $token other, self.1 $token other, self.2 $token other)
             }
         }

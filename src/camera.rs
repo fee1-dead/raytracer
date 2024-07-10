@@ -2,6 +2,7 @@ use std::io::{self, stdout};
 
 use crate::color::Color;
 use crate::interval::Interval;
+use crate::material::Material;
 use crate::object::{Object, ObjectList};
 use crate::ray::Ray;
 use crate::utils::random_double;
@@ -136,16 +137,11 @@ impl Camera {
             return Color::new(0.0, 0.0, 0.0);
         }
         if let Some(record) = world.hit(r, Interval::new(0.001, f64::INFINITY)) {
-            let direction = record.normal + Point::random_unit_vector();
-            let color = self.ray_color(
-                Ray {
-                    origin: record.point,
-                    direction,
-                },
-                depth - 1,
-                world,
-            );
-            return 0.5 * color;
+            return if let Some((attenuation, scattered)) = record.material.scatter(&r, &record) {
+                attenuation * self.ray_color(scattered, depth - 1, world)
+            } else {
+                Color::new(0.0, 0.0, 0.0)
+            };
         }
         let unit = r.direction.unit_vector();
         let a = 0.5 * (unit.1 + 1.0);

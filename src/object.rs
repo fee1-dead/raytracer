@@ -1,4 +1,5 @@
 use crate::interval::Interval;
+use crate::material::AnyMaterial;
 use crate::ray::Ray;
 use crate::vec3::{Point, Vec3};
 
@@ -7,10 +8,16 @@ pub struct HitRecord {
     pub normal: Vec3,
     pub t: f64,
     pub front_face: bool,
+    pub material: AnyMaterial,
 }
 
 impl HitRecord {
-    pub fn new(r: Ray, t: f64, outward_normal: impl FnOnce(Point) -> Vec3) -> Self {
+    pub fn new(
+        r: Ray,
+        t: f64,
+        outward_normal: impl FnOnce(Point) -> Vec3,
+        material: impl Into<AnyMaterial>,
+    ) -> Self {
         let point = r.at(t);
         let outward_normal = outward_normal(point);
         let front_face = r.direction.dot(outward_normal) <= 0.0;
@@ -24,6 +31,7 @@ impl HitRecord {
             normal,
             t,
             front_face,
+            material: material.into(),
         }
     }
 }
@@ -36,11 +44,16 @@ pub trait Object {
 pub struct Sphere {
     pub center: Point,
     pub radius: f64,
+    pub material: AnyMaterial,
 }
 
 impl Object for Sphere {
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
-        let Sphere { center, radius } = *self;
+        let Sphere {
+            center,
+            radius,
+            material,
+        } = *self;
         let oc = center - r.origin;
         let a = r.direction.length_squared();
         let h = r.direction.dot(oc);
@@ -62,7 +75,12 @@ impl Object for Sphere {
             }
         }
 
-        Some(HitRecord::new(r, root, |point| (point - center) / radius))
+        Some(HitRecord::new(
+            r,
+            root,
+            |point| (point - center) / radius,
+            material,
+        ))
     }
 }
 
@@ -73,7 +91,7 @@ pub enum AnyObject {
 impl Object for AnyObject {
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
         match self {
-            AnyObject::Sphere(s) => s.hit(r, ray_t)
+            AnyObject::Sphere(s) => s.hit(r, ray_t),
         }
     }
 }

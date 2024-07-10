@@ -1,12 +1,15 @@
 use std::io;
 
 use camera::{Camera, CameraBuilder};
+use color::Color;
+use material::{Dielectric, Lambertian, Metal};
 use object::{ObjectList, Sphere};
 use vec3::Point;
 
 mod camera;
 mod color;
 mod interval;
+mod material;
 mod object;
 mod ray;
 mod utils;
@@ -18,10 +21,22 @@ fn main() -> io::Result<()> {
     world.add(Sphere {
         center: Point::new(0.0, 0.0, -1.0),
         radius: 0.5,
+        material: Lambertian { albedo: Color::new(0.1, 0.2, 0.5) }.into()
     });
     world.add(Sphere {
         center: Point::new(0.0, -100.5, -1.0),
         radius: 100.0,
+        material: Lambertian { albedo: Color::new(0.8, 0.8, 0.0) }.into(),
+    });
+    world.add(Sphere {
+        center: Point::new(-1.0, 0.0, -1.0),
+        radius: 0.5,
+        material: Metal::new(Color::new(0.8, 0.8, 0.8), 0.3).into(),
+    });
+    world.add(Sphere {
+        center: Point::new(1.0, 0.0, -1.0),
+        radius: 0.5,
+        material: Dielectric::new(1.00 / 1.33).into(),
     });
 
     // camera
