@@ -36,7 +36,12 @@ fn main() -> io::Result<()> {
     world.add(Sphere {
         center: Point::new(1.0, 0.0, -1.0),
         radius: 0.5,
-        material: Dielectric::new(1.00 / 1.33).into(),
+        material: Dielectric::new(1.50).into(),
+    });
+    world.add(Sphere {
+        center: Point::new(1.0, 0.0, -1.0),
+        radius: 0.4,
+        material: Dielectric::new(1.00 / 1.50).into(),
     });
 
     // camera
