@@ -66,14 +66,32 @@ impl Object for Sphere {
     }
 }
 
+pub enum AnyObject {
+    Sphere(Sphere),
+}
+
+impl Object for AnyObject {
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+        match self {
+            AnyObject::Sphere(s) => s.hit(r, ray_t)
+        }
+    }
+}
+
+impl From<Sphere> for AnyObject {
+    fn from(value: Sphere) -> Self {
+        Self::Sphere(value)
+    }
+}
+
 #[derive(Default)]
 pub struct ObjectList {
-    pub objects: Vec<Box<dyn Object>>,
+    pub objects: Vec<AnyObject>,
 }
 
 impl ObjectList {
-    pub fn add(&mut self, o: impl Object + 'static) {
-        self.objects.push(Box::new(o))
+    pub fn add(&mut self, o: impl Into<AnyObject>) {
+        self.objects.push(o.into())
     }
 }
 
