@@ -1,4 +1,4 @@
-use std::io::{self, stdout};
+use std::io::{self, stdout, Write};
 
 use crate::color::Color;
 use crate::interval::Interval;
@@ -146,17 +146,23 @@ impl Camera {
         } = self;
         println!("P3\n{image_width} {image_height}\n255");
 
-        let mut out = stdout().lock();
-        for j in 0..image_height {
+        let mut buffer = vec![0u8; (image_height * image_width * 3) as usize];
+        
+        for (j, buf) in (0..image_height).zip(buffer.chunks_exact_mut(3 * image_width as usize)) {
             eprint!("\rScanlines remaining: {}   ", image_height - j);
-            for i in 0..image_width {
+            for (i, buf) in (0..image_width).zip(buf.chunks_exact_mut(3)) {
                 let mut pixel_color = Color::new(0.0, 0.0, 0.0);
                 for _ in 0..self.samples_per_pixel {
                     let ray = self.get_ray(i, j);
                     pixel_color += self.ray_color(ray, self.max_depth, &world);
                 }
-                (pixel_samples_scale * pixel_color).write_to(&mut out)?;
+                (pixel_samples_scale * pixel_color).write_to_buf(buf);
             }
+        }
+        let mut out = stdout().lock();
+        for chunk in buffer.chunks_exact(3) {
+            let [r, g, b] = [chunk[0], chunk[1], chunk[2]];
+            writeln!(out, "{r} {g} {b}")?;
         }
         eprint!("\rDone.                             \n");
         Ok(())
