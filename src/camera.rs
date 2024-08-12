@@ -1,5 +1,7 @@
 use std::io::{self, stdout, Write};
 
+use image::ExtendedColorType;
+
 use crate::color::Color;
 use crate::interval::Interval;
 use crate::material::Material;
@@ -137,14 +139,13 @@ impl Camera {
     pub fn num_pixels(&self) -> u64 {
         self.image_height * self.image_width
     }
-    pub fn render(self, world: ObjectList) -> io::Result<()> {
+    pub fn render(self, world: ObjectList) -> color_eyre::Result<()> {
         let Camera {
             image_width,
             image_height,
             pixel_samples_scale,
             ..
         } = self;
-        println!("P3\n{image_width} {image_height}\n255");
 
         let mut buffer = vec![0u8; (image_height * image_width * 3) as usize];
         
@@ -159,11 +160,7 @@ impl Camera {
                 (pixel_samples_scale * pixel_color).write_to_buf(buf);
             }
         }
-        let mut out = stdout().lock();
-        for chunk in buffer.chunks_exact(3) {
-            let [r, g, b] = [chunk[0], chunk[1], chunk[2]];
-            writeln!(out, "{r} {g} {b}")?;
-        }
+        image::save_buffer("image.png", &buffer, image_width as u32, image_height as u32, ExtendedColorType::Rgb8)?;
         eprint!("\rDone.                             \n");
         Ok(())
     }

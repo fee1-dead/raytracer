@@ -16,7 +16,8 @@ mod ray;
 mod utils;
 pub(crate) mod vec3;
 
-fn main() -> io::Result<()> {
+fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
     // world
     let mut world = ObjectList::default();
 
