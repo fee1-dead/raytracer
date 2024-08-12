@@ -117,6 +117,7 @@ impl CameraBuilder {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Camera {
     image_width: u64,
     image_height: u64,
@@ -133,6 +134,9 @@ pub struct Camera {
 }
 
 impl Camera {
+    pub fn num_pixels(&self) -> u64 {
+        self.image_height * self.image_width
+    }
     pub fn render(self, world: ObjectList) -> io::Result<()> {
         let Camera {
             image_width,

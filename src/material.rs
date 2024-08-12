@@ -44,6 +44,12 @@ pub struct Lambertian {
     pub albedo: Color,
 }
 
+impl Lambertian {
+    pub fn new(albedo: impl Into<Color>) -> Self {
+        Lambertian { albedo: albedo.into() }
+    }
+}
+
 impl Material for Lambertian {
     fn scatter(&self, _: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
         let mut scatter_direction = rec.normal + Vec3::random_unit_vector();
@@ -67,9 +73,9 @@ pub struct Metal {
 }
 
 impl Metal {
-    pub fn new(albedo: Color, fuzziness: f64) -> Self {
+    pub fn new(albedo: impl Into<Color>, fuzziness: f64) -> Self {
         Metal {
-            albedo,
+            albedo: albedo.into(),
             fuzziness: fuzziness.min(1.0),
         }
     }
