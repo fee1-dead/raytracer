@@ -10,10 +10,6 @@ pub trait Vec3Token {
         + Sub<Output = Self::Data>;
 }
 
-pub fn vec3(x: f64, y: f64, z: f64) -> Vec3 {
-    Vec3(x, y, z)
-}
-
 pub struct GeometryToken;
 impl Vec3Token for GeometryToken {
     type Data = f64;
@@ -27,7 +23,7 @@ pub struct Vec3<Token: Vec3Token = GeometryToken>(
 
 impl<Token: Vec3Token> Vec3<Token> {
     /// A constructor so users can use type aliases.
-    pub fn new(x: Token::Data, y: Token::Data, z: Token::Data) -> Self {
+    pub const fn new(x: Token::Data, y: Token::Data, z: Token::Data) -> Self {
         Self(x, y, z)
     }
     pub fn length_squared(self) -> Token::Data {
@@ -77,6 +73,15 @@ impl<Token: Vec3Token<Data = f64>> Vec3<Token> {
         }
     }
 
+    pub fn random_in_unit_disk() -> Self {
+        loop {
+            let p = Vec3(random_double(), random_double(), 0.0);
+            if p.length_squared() < 1.0 {
+                return p;
+            }
+        }
+    }
+
     pub fn random_unit_vector() -> Self {
         Self::random_in_unit_sphere().unit_vector()
     }
@@ -101,7 +106,7 @@ impl<Token: Vec3Token<Data = f64>> Vec3<Token> {
 
     pub fn refract(self, normal: Self, etai_over_etat: f64) -> Self {
         let cos_theta = (-self).dot(normal).min(1.0);
-        let r_out_perp = etai_over_etat * (self + cos_theta*normal);
+        let r_out_perp = etai_over_etat * (self + cos_theta * normal);
         let r_out_parallel = -(1.0 - r_out_perp.length_squared()).abs().sqrt() * normal;
         r_out_perp + r_out_parallel
     }

@@ -68,7 +68,10 @@ pub struct Metal {
 
 impl Metal {
     pub fn new(albedo: Color, fuzziness: f64) -> Self {
-        Metal { albedo, fuzziness: fuzziness.min(1.0) }
+        Metal {
+            albedo,
+            fuzziness: fuzziness.min(1.0),
+        }
     }
 }
 
@@ -101,8 +104,8 @@ impl Dielectric {
 
     fn reflectance(refraction_index: f64, cosine: f64) -> f64 {
         let r0 = (1.0 - refraction_index) / (1.0 + refraction_index);
-        let r0 = r0*r0;
-        r0 + (1.0 - r0)*(1.0 - cosine).powi(5)
+        let r0 = r0 * r0;
+        r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
     }
 }
 
@@ -116,17 +119,20 @@ impl Material for Dielectric {
 
         let unit_direction = r_in.direction.unit_vector();
         let cos_theta = (-unit_direction).dot(rec.normal).min(1.0);
-        let sin_theta = (1.0 - cos_theta*cos_theta).sqrt();
+        let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
 
         let cannot_refact = ri * sin_theta > 1.0;
-        
+
         let direction = if cannot_refact || Self::reflectance(ri, cos_theta) > random_double() {
             unit_direction.reflect(rec.normal)
         } else {
             unit_direction.refract(rec.normal, ri)
         };
 
-        let ray = Ray { origin: rec.point, direction };
-        Some( (Color::new(1.0, 1.0, 1.0), ray) )
+        let ray = Ray {
+            origin: rec.point,
+            direction,
+        };
+        Some((Color::new(1.0, 1.0, 1.0), ray))
     }
 }

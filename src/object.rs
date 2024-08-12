@@ -84,14 +84,61 @@ impl Object for Sphere {
     }
 }
 
+pub struct Triangle {
+    pub a: Point,
+    pub b: Point,
+    pub c: Point,
+    pub material: AnyMaterial,
+}
+
+impl Object for Triangle {
+    // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+        let e1 = self.b - self.a;
+        let e2 = self.c - self.a;
+
+        let r_cross_e2 = r.direction.cross(e2);
+        let det = e1.dot(r_cross_e2);
+
+        if det.abs() < 1e-8 {
+            return None;
+        }
+
+        let inv_det = 1.0 / det;
+        let s = r.origin - self.a;
+        let u = inv_det * s.dot(r_cross_e2);
+
+        if u < 0.0 || u > 1.0 {
+            return None;
+        }
+
+        let s_cross_e1 = s.cross(e1);
+        let v = inv_det * r.direction.dot(s_cross_e1);
+
+        if v < 0.0 || u + v > 1.0 {
+            return None;
+        }
+
+        let t = inv_det * e2.dot(s_cross_e1);
+
+        if ray_t.contains(t) {
+            Some(HitRecord::new(r, t, |_| e1.cross(e2), self.material))
+        } else {
+            None
+        }
+    }
+}
+
 pub enum AnyObject {
     Sphere(Sphere),
+    Triangle(Triangle),
 }
 
 impl Object for AnyObject {
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
         match self {
             AnyObject::Sphere(s) => s.hit(r, ray_t),
+            AnyObject::Triangle(t) => t.hit(r, ray_t),
         }
     }
 }
@@ -99,6 +146,12 @@ impl Object for AnyObject {
 impl From<Sphere> for AnyObject {
     fn from(value: Sphere) -> Self {
         Self::Sphere(value)
+    }
+}
+
+impl From<Triangle> for AnyObject {
+    fn from(value: Triangle) -> Self {
+        Self::Triangle(value)
     }
 }
 
