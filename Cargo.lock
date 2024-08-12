@@ -340,6 +340,7 @@ dependencies = [
  "color-eyre",
  "image",
  "rand",
+ "rayon",
 ]
 
 [[package]]
