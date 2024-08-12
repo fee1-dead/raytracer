@@ -160,7 +160,6 @@ impl Camera {
             })
         });
         image::save_buffer("image.png", &buffer, image_width as u32, image_height as u32, ExtendedColorType::Rgb8)?;
-        eprint!("\rDone.                             \n");
         Ok(())
     }
     /// A ray originating from the defocus disk and directed at a random point around

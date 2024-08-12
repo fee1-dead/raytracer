@@ -48,7 +48,12 @@ fn main() -> color_eyre::Result<()> {
     let time = Instant::now();
     camera.render(world)?;
     let elapsed = time.elapsed();
-    eprintln!("Elapsed: {elapsed:?}, {}, {}, {}", time_per(elapsed, "frame"), time_per(elapsed / pixels, "pixel"), time_per(elapsed / pixels / samples_per_pixel as u32, "sample"));
+    eprintln!(
+        "Done! Elapsed: {elapsed:?}, {}, {}, {}",
+        time_per(elapsed, "frame"),
+        time_per(elapsed / pixels, "pixel"),
+        time_per(elapsed / pixels / samples_per_pixel as u32, "sample")
+    );
 
     Ok(())
 }
