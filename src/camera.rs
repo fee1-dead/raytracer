@@ -1,5 +1,3 @@
-use std::io::{self, stdout, Write};
-
 use image::ExtendedColorType;
 
 use crate::color::Color;

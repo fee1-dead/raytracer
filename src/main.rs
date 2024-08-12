@@ -1,4 +1,3 @@
-use std::io;
 use std::time::{Duration, Instant};
 
 use camera::CameraBuilder;
