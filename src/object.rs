@@ -3,6 +3,8 @@ use crate::material::AnyMaterial;
 use crate::ray::Ray;
 use crate::vec3::{Point, Vec3};
 
+pub mod polyhedra;
+
 pub struct HitRecord {
     pub point: Point,
     pub normal: Vec3,
@@ -89,6 +91,14 @@ pub struct Triangle {
     pub b: Point,
     pub c: Point,
     pub material: AnyMaterial,
+}
+
+impl Triangle {
+    pub fn new(a: Point, b: Point, c: Point, material: impl Into<AnyMaterial>) -> Triangle {
+        Triangle {
+            a, b, c, material: material.into()
+        }
+    }
 }
 
 impl Object for Triangle {
