@@ -2,8 +2,9 @@ use std::time::{Duration, Instant};
 
 use camera::CameraBuilder;
 use color::Color;
-use material::Lambertian;
-use object::{ObjectList, Sphere, Triangle};
+use material::{AnyMaterial, Dielectric, Lambertian, Metal};
+use object::{ObjectList, Sphere};
+use utils::{random_double, random_double_in};
 use vec3::{Point, Vec3};
 
 pub mod camera;
@@ -20,29 +21,66 @@ fn main() -> color_eyre::Result<()> {
     // world
     let mut world = ObjectList::default();
 
-    // ground
+    let ground_material = Lambertian::new((0.5, 0.5, 0.5));
     world.add(Sphere {
-        center: Point::new(0.0, -100.5, -1.0),
-        radius: 100.0,
-        material: Lambertian::new(Color::new(0.8, 0.8, 0.0)).into(),
+        center: Point::new(0.0, -1000.0, 0.0),
+        radius: 1000.0,
+        material: ground_material.into(),
     });
 
-    world.add(Triangle {
-        a: Point::new(0.0, 0.0, -1.0),
-        b: Point::new(0.5, 0.5, -1.0),
-        c: Point::new(-0.5, 0.5, -1.0),
-        material: Lambertian::new(Color::new(0.0, 1.0, 0.0)).into(),
+    for a in -11..11 {
+        for b in -11..11 {
+            let choose_mat = random_double();
+            let center = Point::new(a as f64 + 0.9*random_double(), 0.2, b as f64 + 0.9*random_double());
+
+            if (center - Point::new(4.0, 0.2, 0.0)).length() > 0.9 {
+                let material = if choose_mat < 0.8 {
+                    let albedo = Color::random() * Color::random();
+                    AnyMaterial::from(Lambertian::new(albedo))
+                } else if choose_mat < 0.95 {
+                    let albedo = Color::random_in(0.5, 1.0);
+                    let fuzziness = random_double_in(0.0, 0.5);
+                    Metal::new(albedo, fuzziness).into()
+                } else {
+                    Dielectric::new(1.5).into()
+                };
+
+                world.add(Sphere {
+                    center, radius: 0.2, material
+                });
+            }
+        }
+    }
+
+    world.add(Sphere {
+        center: Point::new(0.0, 1.0, 0.0),
+        radius: 1.0,
+        material: Dielectric::new(1.5).into(),
+    });
+    world.add(Sphere {
+        center: Point::new(-4.0, 1.0, 0.0),
+        radius: 1.0,
+        material: Lambertian::new(Color::new(0.4, 0.2, 0.1)).into(),
+    });
+    world.add(Sphere {
+        center: Point::new(4.0, 1.0, 0.0),
+        radius: 1.0,
+        material: Metal::new(Color::new(0.7, 0.6, 0.5), 0.0).into(),
     });
 
-    let samples_per_pixel = 100;
+    let samples_per_pixel = 500;
     // camera
     let camera = CameraBuilder::new()
         .aspect_ratio(16.0 / 9.0)
-        .image_width(400)
+        .image_width(1200)
         .samples_per_pixel(samples_per_pixel)
         .max_depth(50)
         .vup(Vec3::new(0.0, 1.0, 0.0))
-        .vfov(100.0)
+        .vfov(20.0)
+        .look_from(Point::new(13.0, 2.0, 3.0))
+        .look_at(Point::new(0.0, 0.0, 0.0))
+        .defocus_angle(0.6)
+        .focus_dist(10.0)
         .build();
     let pixels = camera.num_pixels() as u32;
     let time = Instant::now();

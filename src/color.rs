@@ -38,3 +38,9 @@ impl Color {
         out[..3].copy_from_slice(&rgb)
     }
 }
+
+impl From<(f64, f64, f64)> for Color {
+    fn from((x, y, z): (f64, f64, f64)) -> Self {
+        Self::new(x, y, z)
+    }
+}
