@@ -1,3 +1,4 @@
+use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 
 use crate::utils::{random_double, random_double_in};
@@ -7,7 +8,8 @@ pub trait Vec3Token {
         + Mul<Output = Self::Data>
         + Div<Output = Self::Data>
         + Add<Output = Self::Data>
-        + Sub<Output = Self::Data>;
+        + Sub<Output = Self::Data>
+        + Default;
 }
 
 pub struct GeometryToken;
@@ -174,6 +176,18 @@ macro_rules! impl_scalar_op {
 
 impl_scalar_op!(*, Mul, mul);
 impl_scalar_op!(/, Div, div);
+
+impl<T: Vec3Token> Default for Vec3<T> {
+    fn default() -> Self {
+        Self::new(Default::default(), Default::default(), Default::default())
+    }
+}
+
+impl<T: Vec3Token> Sum for Vec3<T> {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.reduce(|a, b| a + b).unwrap_or_default()
+    }
+}
 
 impl<T: Vec3Token> Clone for Vec3<T> {
     fn clone(&self) -> Self {
