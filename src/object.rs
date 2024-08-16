@@ -59,14 +59,19 @@ impl<T: Object> Translate<T> {
         let offset = offset.into();
         let bbox = object.bounding_box() + offset;
         Self {
-            object, offset, bbox
+            object,
+            offset,
+            bbox,
         }
     }
 }
 
 impl<T: Object> Object for Translate<T> {
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
-        let offset_r = Ray { origin: r.origin - self.offset, direction: r.direction };
+        let offset_r = Ray {
+            origin: r.origin - self.offset,
+            direction: r.direction,
+        };
 
         self.object.hit(offset_r, ray_t).map(|mut rec| {
             rec.point += self.offset;
@@ -98,11 +103,11 @@ impl<T: Object> RotateY<T> {
             for j in 0..2 {
                 for k in 0..2 {
                     let [i, j, k] = [i, j, k].map(|i| i as f64);
-                    let x = i*bbox.x.max + (1.0-i)*bbox.x.min;
-                    let y = j*bbox.y.max + (1.0-j)*bbox.y.min;
-                    let z = k*bbox.z.max + (1.0-k)*bbox.z.min;
-                    let newx = cos_theta*x + sin_theta*z;
-                    let newz = -sin_theta*x + cos_theta*z;
+                    let x = i * bbox.x.max + (1.0 - i) * bbox.x.min;
+                    let y = j * bbox.y.max + (1.0 - j) * bbox.y.min;
+                    let z = k * bbox.z.max + (1.0 - k) * bbox.z.min;
+                    let newx = cos_theta * x + sin_theta * z;
+                    let newz = -sin_theta * x + cos_theta * z;
 
                     let tester: Vec3 = Vec3(newx, y, newz);
 
@@ -115,7 +120,10 @@ impl<T: Object> RotateY<T> {
         }
         let bbox = AxisAlignedBoundingBox::from_points(min, max);
         Self {
-            object, sin_theta, cos_theta, bbox
+            object,
+            sin_theta,
+            cos_theta,
+            bbox,
         }
     }
 }
@@ -131,7 +139,7 @@ impl<T: Object> Object for RotateY<T> {
         direction.2 = self.sin_theta*r.direction.0 + self.cos_theta*r.direction.2;
 
         let rotated_r = Ray { origin, direction };
-        
+
         let Some(mut rec) = self.object.hit(rotated_r, ray_t) else { return None; };
 
         let mut p = rec.point;
@@ -384,7 +392,6 @@ impl ObjectList {
     pub fn add_all(&mut self, o: impl IntoIterator<Item = impl Object + 'static>) {
         o.into_iter().for_each(|v| self.add(v));
     }
-
 
     pub fn len(&self) -> usize {
         self.objects.len()

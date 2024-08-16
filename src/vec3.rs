@@ -231,4 +231,3 @@ impl<T: Vec3Token> IndexMut<usize> for Vec3<T> {
         }
     }
 }
-
