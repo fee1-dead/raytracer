@@ -1,6 +1,6 @@
 use std::array;
 use std::iter::Sum;
-use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, Index, IndexMut, Mul, Neg, Sub, SubAssign};
 
 use crate::utils::{random_double, random_double_in};
 
@@ -208,3 +208,27 @@ impl<T: Vec3Token> IntoIterator for Vec3<T> {
         [self.0, self.1, self.2].into_iter()
     }
 }
+
+impl<T: Vec3Token> Index<usize> for Vec3<T> {
+    type Output = T::Data;
+    fn index(&self, index: usize) -> &T::Data {
+        match index {
+            0 => &self.0,
+            1 => &self.1,
+            2 => &self.2,
+            _ => panic!("index out of bounds"),
+        }
+    }
+}
+
+impl<T: Vec3Token> IndexMut<usize> for Vec3<T> {
+    fn index_mut(&mut self, index: usize) -> &mut T::Data {
+        match index {
+            0 => &mut self.0,
+            1 => &mut self.1,
+            2 => &mut self.2,
+            _ => panic!("index out of bounds"),
+        }
+    }
+}
+

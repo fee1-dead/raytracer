@@ -1,7 +1,7 @@
 use crate::camera::CameraBuilder;
 use crate::color::Color;
 use crate::material::{DiffuseLight, Lambertian};
-use crate::object::{box_3d, ObjectList, Quad};
+use crate::object::{box_3d, ObjectList, Quad, RotateY, Translate};
 use crate::vec3::{Point, Vec3};
 
 use super::Scene;
@@ -50,8 +50,15 @@ pub fn cornell_box() -> Scene {
         Vec3::new(0.0, 555.0, 0.0),
         white,
     ));
-    world.add_all(box_3d(Point::new(130.0, 0.0, 65.0), Point::new(295.0, 165.0, 230.0), white));
-    world.add_all(box_3d(Point::new(265.0, 0.0, 295.0), Point::new(430.0, 330.0, 460.0), white));
+    let box1 = box_3d(Point::new(0.0, 0.0, 0.0), Point::new(165.0, 330.0, 165.0), white);
+    let box1 = RotateY::new(box1, 15.0);
+    let box1 = Translate::new(box1, Vec3(265.0,0.0,295.0));
+    world.add(box1);
+
+    let box2 = box_3d(Point::new(0.0, 0.0, 0.0), Point::new(165.0, 165.0, 165.0), white);
+    let box2 = RotateY::new(box2, -18.0);
+    let box2 = Translate::new(box2, Vec3(130.0,0.0,65.0));
+    world.add(box2);
 
     let camera = CameraBuilder::new()
         .aspect_ratio(1.0)

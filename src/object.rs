@@ -48,6 +48,109 @@ pub trait Object: Send + Sync {
     fn bounding_box(&self) -> AxisAlignedBoundingBox;
 }
 
+pub struct Translate<T> {
+    object: T,
+    offset: Vec3,
+    bbox: AxisAlignedBoundingBox,
+}
+
+impl<T: Object> Translate<T> {
+    pub fn new(object: T, offset: impl Into<Vec3>) -> Self {
+        let offset = offset.into();
+        let bbox = object.bounding_box() + offset;
+        Self {
+            object, offset, bbox
+        }
+    }
+}
+
+impl<T: Object> Object for Translate<T> {
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+        let offset_r = Ray { origin: r.origin - self.offset, direction: r.direction };
+
+        self.object.hit(offset_r, ray_t).map(|mut rec| {
+            rec.point += self.offset;
+            rec
+        })
+    }
+    fn bounding_box(&self) -> AxisAlignedBoundingBox {
+        self.bbox
+    }
+}
+
+pub struct RotateY<T> {
+    object: T,
+    sin_theta: f64,
+    cos_theta: f64,
+    bbox: AxisAlignedBoundingBox,
+}
+
+impl<T: Object> RotateY<T> {
+    pub fn new(object: T, angle: f64) -> Self {
+        let rad = angle.to_radians();
+        let (sin_theta, cos_theta) = rad.sin_cos();
+        let bbox = object.bounding_box();
+
+        let mut min = Point::splat(f64::INFINITY);
+        let mut max = Point::splat(f64::NEG_INFINITY);
+
+        for i in 0..2 {
+            for j in 0..2 {
+                for k in 0..2 {
+                    let [i, j, k] = [i, j, k].map(|i| i as f64);
+                    let x = i*bbox.x.max + (1.0-i)*bbox.x.min;
+                    let y = j*bbox.y.max + (1.0-j)*bbox.y.min;
+                    let z = k*bbox.z.max + (1.0-k)*bbox.z.min;
+                    let newx = cos_theta*x + sin_theta*z;
+                    let newz = -sin_theta*x + cos_theta*z;
+
+                    let tester: Vec3 = Vec3(newx, y, newz);
+
+                    for c in 0..3 {
+                        min[c] = min[c].min(tester[c]);
+                        max[c] = max[c].max(tester[c]);
+                    }
+                }
+            }
+        }
+        let bbox = AxisAlignedBoundingBox::from_points(min, max);
+        Self {
+            object, sin_theta, cos_theta, bbox
+        }
+    }
+}
+
+impl<T: Object> Object for RotateY<T> {
+    #[rustfmt::skip]
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+        let Ray { mut origin, mut direction } = r;
+        origin.0 = self.cos_theta*r.origin.0 - self.sin_theta*r.origin.2;
+        origin.2 = self.sin_theta*r.origin.0 + self.cos_theta*r.origin.2;
+
+        direction.0 = self.cos_theta*r.direction.0 - self.sin_theta*r.direction.2;
+        direction.2 = self.sin_theta*r.direction.0 + self.cos_theta*r.direction.2;
+
+        let rotated_r = Ray { origin, direction };
+        
+        let Some(mut rec) = self.object.hit(rotated_r, ray_t) else { return None; };
+
+        let mut p = rec.point;
+        p.0 =  self.cos_theta*rec.point.0 + self.sin_theta*rec.point.2;
+        p.2 = -self.sin_theta*rec.point.0 + self.cos_theta*rec.point.2;
+
+        let mut normal = rec.normal;
+        normal.0 =  self.cos_theta*rec.normal.0 + self.sin_theta*rec.normal.2;
+        normal.2 = -self.sin_theta*rec.normal.0 + self.cos_theta*rec.normal.2;
+
+        rec.point = p;
+        rec.normal = normal;
+        Some(rec)
+    }
+    fn bounding_box(&self) -> AxisAlignedBoundingBox {
+        self.bbox
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct Sphere {
     center: Point,
@@ -243,7 +346,7 @@ impl Object for Quad {
 }
 
 #[rustfmt::skip]
-pub fn box_3d(a: Point, b: Point, mat: impl Into<AnyMaterial>) -> [Quad; 6] {
+pub fn box_3d(a: Point, b: Point, mat: impl Into<AnyMaterial>) -> ObjectList {
     let min = Point::new(a.0.min(b.0), a.1.min(b.1), a.2.min(b.2));
     let max = Point::new(a.0.max(b.0), a.1.max(b.1), a.2.max(b.2));
 
@@ -253,14 +356,17 @@ pub fn box_3d(a: Point, b: Point, mat: impl Into<AnyMaterial>) -> [Quad; 6] {
 
     let mat = mat.into();
 
-    [   
+    let mut list = ObjectList::default();
+    let faces = [   
         Quad::new(Point::new(min.0, min.1, max.2),  dx,  dy, mat), // front
         Quad::new(Point::new(max.0, min.1, max.2), -dz,  dy, mat), // right
         Quad::new(Point::new(max.0, min.1, min.2), -dx,  dy, mat), // back
         Quad::new(Point::new(min.0, min.1, min.2),  dz,  dy, mat), // left
         Quad::new(Point::new(min.0, max.1, max.2),  dx, -dz, mat), // top
         Quad::new(Point::new(min.0, min.1, min.2),  dx,  dz, mat), // bottom
-    ]
+    ];
+    list.add_all(faces);
+    list
 }
 
 #[derive(Default)]

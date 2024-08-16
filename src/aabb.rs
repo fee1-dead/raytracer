@@ -1,6 +1,8 @@
+use std::ops::Add;
+
 use crate::interval::Interval;
 use crate::ray::Ray;
-use crate::vec3::Point;
+use crate::vec3::{Point, Vec3};
 
 #[derive(Clone, Copy, Default)]
 pub struct AxisAlignedBoundingBox {
@@ -93,5 +95,20 @@ impl AxisAlignedBoundingBox {
             .max_by(|(_, a), (_, b)| a.total_cmp(b))
             .unwrap()
             .0
+    }
+}
+
+impl Add<Vec3> for AxisAlignedBoundingBox {
+    type Output = AxisAlignedBoundingBox;
+    fn add(self, rhs: Vec3) -> AxisAlignedBoundingBox {
+        Self::new(self.x + rhs.0, self.y + rhs.1, self.z + rhs.2)
+    }
+}
+
+impl Add<f64> for Interval {
+    type Output = Interval;
+
+    fn add(self, rhs: f64) -> Interval {
+        Interval::new(self.min + rhs, self.max + rhs)
     }
 }
