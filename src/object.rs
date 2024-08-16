@@ -242,6 +242,27 @@ impl Object for Quad {
     }
 }
 
+#[rustfmt::skip]
+pub fn box_3d(a: Point, b: Point, mat: impl Into<AnyMaterial>) -> [Quad; 6] {
+    let min = Point::new(a.0.min(b.0), a.1.min(b.1), a.2.min(b.2));
+    let max = Point::new(a.0.max(b.0), a.1.max(b.1), a.2.max(b.2));
+
+    let dx = Vec3(max.0 - min.0, 0.0, 0.0);
+    let dy = Vec3(0.0, max.1 - min.1, 0.0);
+    let dz = Vec3(0.0, 0.0, max.2 - min.2);
+
+    let mat = mat.into();
+
+    [   
+        Quad::new(Point::new(min.0, min.1, max.2),  dx,  dy, mat), // front
+        Quad::new(Point::new(max.0, min.1, max.2), -dz,  dy, mat), // right
+        Quad::new(Point::new(max.0, min.1, min.2), -dx,  dy, mat), // back
+        Quad::new(Point::new(min.0, min.1, min.2),  dz,  dy, mat), // left
+        Quad::new(Point::new(min.0, max.1, max.2),  dx, -dz, mat), // top
+        Quad::new(Point::new(min.0, min.1, min.2),  dx,  dz, mat), // bottom
+    ]
+}
+
 macro_rules! generate_any_object {
     ($($variant:ident),*$(,)?) => {
         #[derive(Clone)]
@@ -284,6 +305,11 @@ impl ObjectList {
         self.aabb = self.aabb.merge(o.bounding_box());
         self.objects.push(o)
     }
+
+    pub fn add_all(&mut self, o: impl IntoIterator<Item = impl Into<AnyObject>>) {
+        o.into_iter().for_each(|v| self.add(v));
+    }
+
 
     pub fn len(&self) -> usize {
         self.objects.len()

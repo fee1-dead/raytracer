@@ -7,6 +7,9 @@ pub use quads::quads;
 mod simple_light;
 pub use simple_light::simple_light;
 
+mod cornell_box;
+pub use cornell_box::cornell_box;
+
 use std::time::{Duration, Instant};
 
 use crate::camera::Camera;

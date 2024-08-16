@@ -12,6 +12,6 @@ pub(crate) mod vec3;
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    scenes::simple_light().render_with_metrics()?;
+    scenes::cornell_box().render_with_metrics()?;
     Ok(())
 }
