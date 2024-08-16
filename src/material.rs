@@ -13,36 +13,35 @@ pub trait Material {
     fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)>;
 }
 
-#[derive(Clone, Copy)]
-pub enum AnyMaterial {
-    Lambertian(Lambertian),
-    Metal(Metal),
-    Dielectric(Dielectric),
-}
+macro_rules! generate_any_material {
+    ($($x:ident),*$(,)?) => {
+        #[derive(Clone, Copy)]
+        pub enum AnyMaterial {
+            $($x($x),)*
+        }
 
-macro_rules! impl_from {
-    ($x:ident) => {
-        impl From<$x> for AnyMaterial {
+        impl Material for AnyMaterial {
+            fn emitted(&self, p: Point) -> Color {
+                match self {
+                    $(Self::$x(v) => v.emitted(p),)*
+                }
+            }
+            fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
+                match self {
+                    $(Self::$x(v) => v.scatter(r_in, rec),)*
+                }
+            }
+        }
+
+        $(impl From<$x> for AnyMaterial {
             fn from(x: $x) -> Self {
                 Self::$x(x)
             }
-        }
+        })*
     };
 }
 
-impl_from!(Lambertian);
-impl_from!(Metal);
-impl_from!(Dielectric);
-
-impl Material for AnyMaterial {
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
-        match self {
-            Self::Lambertian(l) => l.scatter(r_in, rec),
-            Self::Metal(m) => m.scatter(r_in, rec),
-            Self::Dielectric(d) => d.scatter(r_in, rec),
-        }
-    }
-}
+generate_any_material!(Lambertian, Metal, Dielectric, DiffuseLight);
 
 #[derive(Clone, Copy)]
 pub struct Lambertian {
@@ -150,6 +149,7 @@ impl Material for Dielectric {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct DiffuseLight(pub Color);
 
 impl Material for DiffuseLight {

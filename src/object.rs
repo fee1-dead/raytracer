@@ -150,7 +150,7 @@ impl Object for Triangle {
         let s = r.origin - self.a;
         let u = inv_det * s.dot(r_cross_e2);
 
-        if u < 0.0 || u > 1.0 {
+        if !(0.0..=1.0).contains(&u) {
             return None;
         }
 
@@ -282,7 +282,7 @@ impl ObjectList {
     pub fn add(&mut self, o: impl Into<AnyObject>) {
         let o = o.into();
         self.aabb = self.aabb.merge(o.bounding_box());
-        self.objects.push(o.into())
+        self.objects.push(o)
     }
 
     pub fn len(&self) -> usize {

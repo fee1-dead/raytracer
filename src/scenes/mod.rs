@@ -4,6 +4,9 @@ pub use balls::balls;
 mod quads;
 pub use quads::quads;
 
+mod simple_light;
+pub use simple_light::simple_light;
+
 use std::time::{Duration, Instant};
 
 use crate::camera::Camera;
