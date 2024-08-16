@@ -20,6 +20,24 @@ impl AxisAlignedBoundingBox {
         y: Interval::UNIVERSE,
         z: Interval::UNIVERSE,
     };
+    fn pad_to_minimums(mut self) -> Self {
+        let delta = 0.0001;
+        if self.x.size() < delta {
+            self.x = self.x.expand(delta);
+        }
+        if self.y.size() < delta {
+            self.y = self.y.expand(delta);
+        }
+        if self.z.size() < delta {
+            self.z = self.z.expand(delta);
+        }
+        self
+    }
+    pub fn new(x: Interval, y: Interval, z: Interval) -> Self {
+        let val = Self { x, y, z };
+        val.pad_to_minimums()
+    }
+
     pub fn from_points(a: Point, b: Point) -> AxisAlignedBoundingBox {
         let mk_interval = |a, b| {
             if a <= b {
@@ -28,11 +46,11 @@ impl AxisAlignedBoundingBox {
                 Interval::new(b, a)
             }
         };
-        AxisAlignedBoundingBox {
-            x: mk_interval(a.0, b.0),
-            y: mk_interval(a.1, b.1),
-            z: mk_interval(a.2, b.2),
-        }
+        AxisAlignedBoundingBox::new(
+            mk_interval(a.0, b.0),
+            mk_interval(a.1, b.1),
+            mk_interval(a.2, b.2),
+        )
     }
 
     pub fn hit(self, Ray { origin, direction }: Ray, mut ray_t: Interval) -> bool {

@@ -229,6 +229,10 @@ impl ObjectList {
         self.objects.push(o.into())
     }
 
+    pub fn len(&self) -> usize {
+        self.objects.len()
+    }
+
     pub fn condense(&mut self) {
         let objects = take(&mut self.objects);
         self.objects.push(BvhNode::from(objects).into())
