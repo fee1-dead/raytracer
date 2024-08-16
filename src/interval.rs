@@ -11,6 +11,13 @@ impl Interval {
         Self { min, max }
     }
 
+    pub fn merge(self, other: Interval) -> Interval {
+        Interval {
+            min: self.min.min(other.min),
+            max: self.max.max(other.max),
+        }
+    }
+
     pub fn size(self) -> f64 {
         self.max - self.min
     }
@@ -31,5 +38,11 @@ impl Interval {
         } else {
             x
         }
+    }
+}
+
+impl Default for Interval {
+    fn default() -> Self {
+        Self::EMPTY
     }
 }

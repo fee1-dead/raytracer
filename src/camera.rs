@@ -148,18 +148,29 @@ impl Camera {
         } = self;
 
         let mut buffer = vec![0u8; (image_height * image_width * 3) as usize];
-        
-        buffer.par_chunks_exact_mut(3 * image_width as usize).enumerate().for_each(|(j, buf)| {
-            buf.par_chunks_exact_mut(3).enumerate().for_each(|(i, buf)| {
-                let mut pixel_color = Color::new(0.0, 0.0, 0.0);
-                for _ in 0..self.samples_per_pixel {
-                    let ray = self.get_ray(i as u64, j as u64);
-                    pixel_color += self.ray_color(ray, self.max_depth, &world);
-                }
-                (pixel_samples_scale * pixel_color).write_to_buf(buf);
-            })
-        });
-        image::save_buffer("image.png", &buffer, image_width as u32, image_height as u32, ExtendedColorType::Rgb8)?;
+
+        buffer
+            .par_chunks_exact_mut(3 * image_width as usize)
+            .enumerate()
+            .for_each(|(j, buf)| {
+                buf.par_chunks_exact_mut(3)
+                    .enumerate()
+                    .for_each(|(i, buf)| {
+                        let mut pixel_color = Color::new(0.0, 0.0, 0.0);
+                        for _ in 0..self.samples_per_pixel {
+                            let ray = self.get_ray(i as u64, j as u64);
+                            pixel_color += self.ray_color(ray, self.max_depth, &world);
+                        }
+                        (pixel_samples_scale * pixel_color).write_to_buf(buf);
+                    })
+            });
+        image::save_buffer(
+            "image.png",
+            &buffer,
+            image_width as u32,
+            image_height as u32,
+            ExtendedColorType::Rgb8,
+        )?;
         Ok(())
     }
     /// A ray originating from the defocus disk and directed at a random point around

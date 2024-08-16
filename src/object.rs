@@ -1,3 +1,7 @@
+use std::mem::take;
+
+use crate::aabb::AxisAlignedBoundingBox;
+use crate::bvh::BvhNode;
 use crate::interval::Interval;
 use crate::material::AnyMaterial;
 use crate::ray::Ray;
@@ -5,6 +9,7 @@ use crate::vec3::{Point, Vec3};
 
 pub mod polyhedra;
 
+#[derive(Clone, Copy)]
 pub struct HitRecord {
     pub point: Point,
     pub normal: Vec3,
@@ -40,13 +45,28 @@ impl HitRecord {
 
 pub trait Object {
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord>;
+    fn bounding_box(&self) -> AxisAlignedBoundingBox;
 }
 
 #[derive(Clone, Copy)]
 pub struct Sphere {
-    pub center: Point,
-    pub radius: f64,
-    pub material: AnyMaterial,
+    center: Point,
+    radius: f64,
+    material: AnyMaterial,
+    aabb: AxisAlignedBoundingBox,
+}
+
+impl Sphere {
+    pub fn new(center: Point, radius: f64, material: impl Into<AnyMaterial>) -> Sphere {
+        let rvec = Vec3::splat(radius);
+        let aabb = AxisAlignedBoundingBox::from_points(center - rvec, center + rvec);
+        Sphere {
+            center,
+            radius,
+            material: material.into(),
+            aabb,
+        }
+    }
 }
 
 impl Object for Sphere {
@@ -55,6 +75,7 @@ impl Object for Sphere {
             center,
             radius,
             material,
+            aabb: _,
         } = *self;
         let oc = center - r.origin;
         let a = r.direction.length_squared();
@@ -84,19 +105,30 @@ impl Object for Sphere {
             material,
         ))
     }
+    fn bounding_box(&self) -> AxisAlignedBoundingBox {
+        self.aabb
+    }
 }
 
+#[derive(Clone, Copy)]
 pub struct Triangle {
-    pub a: Point,
-    pub b: Point,
-    pub c: Point,
-    pub material: AnyMaterial,
+    a: Point,
+    b: Point,
+    c: Point,
+    material: AnyMaterial,
+    aabb: AxisAlignedBoundingBox,
 }
 
 impl Triangle {
     pub fn new(a: Point, b: Point, c: Point, material: impl Into<AnyMaterial>) -> Triangle {
+        let aabb1 = AxisAlignedBoundingBox::from_points(a, b);
+        let aabb2 = AxisAlignedBoundingBox::from_points(b, c);
         Triangle {
-            a, b, c, material: material.into()
+            a,
+            b,
+            c,
+            material: material.into(),
+            aabb: aabb1.merge(aabb2),
         }
     }
 }
@@ -137,11 +169,16 @@ impl Object for Triangle {
             None
         }
     }
+    fn bounding_box(&self) -> AxisAlignedBoundingBox {
+        self.aabb
+    }
 }
 
+#[derive(Clone)]
 pub enum AnyObject {
     Sphere(Sphere),
     Triangle(Triangle),
+    BvhNode(BvhNode),
 }
 
 impl Object for AnyObject {
@@ -149,6 +186,14 @@ impl Object for AnyObject {
         match self {
             AnyObject::Sphere(s) => s.hit(r, ray_t),
             AnyObject::Triangle(t) => t.hit(r, ray_t),
+            AnyObject::BvhNode(b) => b.hit(r, ray_t),
+        }
+    }
+    fn bounding_box(&self) -> AxisAlignedBoundingBox {
+        match self {
+            AnyObject::Sphere(s) => s.bounding_box(),
+            AnyObject::Triangle(t) => t.bounding_box(),
+            AnyObject::BvhNode(b) => b.bounding_box(),
         }
     }
 }
@@ -165,14 +210,28 @@ impl From<Triangle> for AnyObject {
     }
 }
 
+impl From<BvhNode> for AnyObject {
+    fn from(value: BvhNode) -> Self {
+        Self::BvhNode(value)
+    }
+}
+
 #[derive(Default)]
 pub struct ObjectList {
-    pub objects: Vec<AnyObject>,
+    objects: Vec<AnyObject>,
+    aabb: AxisAlignedBoundingBox,
 }
 
 impl ObjectList {
     pub fn add(&mut self, o: impl Into<AnyObject>) {
+        let o = o.into();
+        self.aabb = self.aabb.merge(o.bounding_box());
         self.objects.push(o.into())
+    }
+
+    pub fn condense(&mut self) {
+        let objects = take(&mut self.objects);
+        self.objects.push(BvhNode::from(objects).into())
     }
 }
 
@@ -187,5 +246,8 @@ impl Object for ObjectList {
             }
         }
         hit_record
+    }
+    fn bounding_box(&self) -> AxisAlignedBoundingBox {
+        self.aabb
     }
 }

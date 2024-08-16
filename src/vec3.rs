@@ -1,3 +1,4 @@
+use std::array;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 
@@ -27,6 +28,9 @@ impl<Token: Vec3Token> Vec3<Token> {
     /// A constructor so users can use type aliases.
     pub const fn new(x: Token::Data, y: Token::Data, z: Token::Data) -> Self {
         Self(x, y, z)
+    }
+    pub const fn splat(x: Token::Data) -> Self {
+        Self(x, x, x)
     }
     pub fn length_squared(self) -> Token::Data {
         self.0 * self.0 + self.1 * self.1 + self.2 * self.2
@@ -196,3 +200,11 @@ impl<T: Vec3Token> Clone for Vec3<T> {
 }
 
 impl<T: Vec3Token> Copy for Vec3<T> {}
+
+impl<T: Vec3Token> IntoIterator for Vec3<T> {
+    type IntoIter = array::IntoIter<T::Data, 3>;
+    type Item = T::Data;
+    fn into_iter(self) -> Self::IntoIter {
+        [self.0, self.1, self.2].into_iter()
+    }
+}
