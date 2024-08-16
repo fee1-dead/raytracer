@@ -1,7 +1,10 @@
 mod balls;
-use std::time::{Duration, Instant};
-
 pub use balls::balls;
+
+mod quads;
+pub use quads::quads;
+
+use std::time::{Duration, Instant};
 
 use crate::camera::Camera;
 use crate::object::ObjectList;

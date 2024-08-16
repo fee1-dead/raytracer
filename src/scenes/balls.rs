@@ -73,6 +73,7 @@ pub fn balls() -> Scene {
         .look_at(Point::new(0.0, 0.0, 0.0))
         .defocus_angle(0.6)
         .focus_dist(10.0)
+        .background(Color::new(0.7, 0.8, 1.0))
         .build();
 
     Scene { camera, world }

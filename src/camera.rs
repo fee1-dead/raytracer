@@ -22,6 +22,7 @@ pub struct CameraBuilder {
     vup: Vec3,
     defocus_angle: f64,
     focus_dist: f64,
+    background: Color,
 }
 
 macro_rules! builder_methods {
@@ -48,6 +49,7 @@ impl CameraBuilder {
             vup: Vec3::new(0.0, 1.0, 0.0),
             defocus_angle: 0.0,
             focus_dist: 10.0,
+            background: Color::new(0.0, 0.0, 0.0),
         }
     }
     builder_methods!(
@@ -61,6 +63,7 @@ impl CameraBuilder {
         vup: Vec3,
         defocus_angle: f64,
         focus_dist: f64,
+        background: Color,
     );
     pub fn build(&self) -> Camera {
         let Self {
@@ -74,6 +77,7 @@ impl CameraBuilder {
             vup,
             defocus_angle,
             focus_dist,
+            background,
         } = *self;
         let image_height = (image_width as f64 / aspect_ratio) as u64;
         let image_height = image_height.max(1);
@@ -105,6 +109,7 @@ impl CameraBuilder {
         Camera {
             image_width,
             image_height,
+            background,
             pixel00_loc,
             pixel_delta_u,
             pixel_delta_v,
@@ -123,6 +128,7 @@ impl CameraBuilder {
 pub struct Camera {
     image_width: u64,
     image_height: u64,
+    background: Color,
     pixel00_loc: Point,
     pixel_delta_u: Vec3,
     pixel_delta_v: Vec3,
@@ -201,14 +207,17 @@ impl Camera {
             return Color::new(0.0, 0.0, 0.0);
         }
         if let Some(record) = world.hit(r, Interval::new(0.001, f64::INFINITY)) {
-            return if let Some((attenuation, scattered)) = record.material.scatter(&r, &record) {
-                attenuation * self.ray_color(scattered, depth - 1, world)
-            } else {
-                Color::new(0.0, 0.0, 0.0)
+            let color_from_emission = record.material.emitted(record.point);
+
+            let Some((attenuation, scattered)) = record.material.scatter(&r, &record) else {
+                return color_from_emission;
             };
+
+            let color_from_scatter = attenuation * self.ray_color(scattered, depth - 1, world);
+
+            color_from_emission + color_from_scatter
+        } else {
+            self.background
         }
-        let unit = r.direction.unit_vector();
-        let a = 0.5 * (unit.1 + 1.0);
-        (1.0 - a) * Color::new(1.0, 1.0, 1.0) + a * Color::new(0.5, 0.7, 1.0)
     }
 }

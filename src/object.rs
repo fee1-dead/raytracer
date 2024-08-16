@@ -174,47 +174,103 @@ impl Object for Triangle {
     }
 }
 
-#[derive(Clone)]
-pub enum AnyObject {
-    Sphere(Sphere),
-    Triangle(Triangle),
-    BvhNode(BvhNode),
+#[derive(Clone, Copy)]
+pub struct Quad {
+    q: Point,
+    u: Vec3,
+    v: Vec3,
+    w: Vec3,
+    mat: AnyMaterial,
+    bbox: AxisAlignedBoundingBox,
+    normal: Vec3,
+    d: f64,
 }
 
-impl Object for AnyObject {
-    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
-        match self {
-            AnyObject::Sphere(s) => s.hit(r, ray_t),
-            AnyObject::Triangle(t) => t.hit(r, ray_t),
-            AnyObject::BvhNode(b) => b.hit(r, ray_t),
+impl Quad {
+    pub fn new(q: Point, u: Vec3, v: Vec3, mat: impl Into<AnyMaterial>) -> Self {
+        let bbox1 = AxisAlignedBoundingBox::from_points(q, q + u + v);
+        let bbox2 = AxisAlignedBoundingBox::from_points(q + u, q + v);
+        let n = u.cross(v);
+        let normal = n.unit_vector();
+        let d = normal.dot(q);
+        let w = n / n.dot(n);
+        Self {
+            q,
+            u,
+            v,
+            w,
+            mat: mat.into(),
+            bbox: bbox1.merge(bbox2),
+            normal,
+            d,
         }
+    }
+
+    pub fn hit_as_interior(&self, a: f64, b: f64, rec: HitRecord) -> Option<HitRecord> {
+        let unit_interval = Interval::new(0.0, 1.0);
+
+        if !unit_interval.contains(a) || !unit_interval.contains(b) {
+            None
+        } else {
+            // TODO uv coords should be set here.
+            Some(rec)
+        }
+    }
+}
+
+impl Object for Quad {
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+        let denom = self.normal.dot(r.direction);
+
+        if denom.abs() < 1e-8 {
+            return None;
+        }
+
+        let t = (self.d - self.normal.dot(r.origin)) / denom;
+        if !ray_t.contains(t) {
+            return None;
+        }
+
+        let planar_hitpt_vector = r.at(t) - self.q;
+        let alpha = self.w.dot(planar_hitpt_vector.cross(self.v));
+        let beta = self.w.dot(self.u.cross(planar_hitpt_vector));
+        let rec = HitRecord::new(r, t, |_| self.normal, self.mat);
+        self.hit_as_interior(alpha, beta, rec)
     }
     fn bounding_box(&self) -> AxisAlignedBoundingBox {
-        match self {
-            AnyObject::Sphere(s) => s.bounding_box(),
-            AnyObject::Triangle(t) => t.bounding_box(),
-            AnyObject::BvhNode(b) => b.bounding_box(),
+        self.bbox
+    }
+}
+
+macro_rules! generate_any_object {
+    ($($variant:ident),*$(,)?) => {
+        #[derive(Clone)]
+        pub enum AnyObject {
+            $($variant($variant),)*
         }
-    }
+        impl Object for AnyObject {
+            fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+                match self {
+                    $(AnyObject::$variant(x) => x.hit(r, ray_t),)*
+                }
+            }
+            fn bounding_box(&self) -> AxisAlignedBoundingBox {
+                match self {
+                    $(AnyObject::$variant(x) => x.bounding_box(),)*
+                }
+            }
+        }
+        $(
+            impl From<$variant> for AnyObject {
+                fn from(value: $variant) -> Self {
+                    Self::$variant(value)
+                }
+            }
+        )*
+    };
 }
 
-impl From<Sphere> for AnyObject {
-    fn from(value: Sphere) -> Self {
-        Self::Sphere(value)
-    }
-}
-
-impl From<Triangle> for AnyObject {
-    fn from(value: Triangle) -> Self {
-        Self::Triangle(value)
-    }
-}
-
-impl From<BvhNode> for AnyObject {
-    fn from(value: BvhNode) -> Self {
-        Self::BvhNode(value)
-    }
-}
+generate_any_object!(Sphere, Triangle, BvhNode, Quad);
 
 #[derive(Default)]
 pub struct ObjectList {

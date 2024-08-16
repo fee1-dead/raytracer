@@ -2,9 +2,14 @@ use crate::color::Color;
 use crate::object::HitRecord;
 use crate::ray::Ray;
 use crate::utils::random_double;
-use crate::vec3::Vec3;
+use crate::vec3::{Point, Vec3};
 
 pub trait Material {
+    #[expect(unused_variables)]
+    // TODO: no uv because we skipped textures
+    fn emitted(&self, p: Point) -> Color {
+        Color::default()
+    }
     fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)>;
 }
 
@@ -142,5 +147,16 @@ impl Material for Dielectric {
             direction,
         };
         Some((Color::new(1.0, 1.0, 1.0), ray))
+    }
+}
+
+pub struct DiffuseLight(pub Color);
+
+impl Material for DiffuseLight {
+    fn emitted(&self, _: Point) -> Color {
+        self.0
+    }
+    fn scatter(&self, _: &Ray, _: &HitRecord) -> Option<(Color, Ray)> {
+        None
     }
 }
