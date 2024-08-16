@@ -3,34 +3,39 @@ use std::sync::Arc;
 
 use crate::aabb::AxisAlignedBoundingBox;
 use crate::interval::Interval;
-use crate::object::{AnyObject, HitRecord, Object};
+use crate::object::{HitRecord, Object};
 use crate::ray::Ray;
 
 #[derive(Clone)]
 pub struct BvhNode {
-    left: Arc<AnyObject>,
-    right: Arc<AnyObject>,
+    left: Arc<dyn Object>,
+    right: Arc<dyn Object>,
     bbox: AxisAlignedBoundingBox,
 }
 
 impl BvhNode {
-    pub fn from_objects_mut(objects: &mut [AnyObject]) -> BvhNode {
+    pub fn from_objects_mut(objects: &mut Vec<Box<dyn Object>>) -> BvhNode {
         let mut bbox = AxisAlignedBoundingBox::EMPTY;
         for obj in objects.iter_mut() {
             bbox = bbox.merge(obj.bounding_box());
         }
-        let [left, right] = match objects {
-            [] => panic!("object list for BVH must be non-empty"),
-            [a] => {
-                let x = Arc::new(a.clone());
+        let [left, right] = match objects.len() {
+            0 => panic!("object list for BVH must be non-empty"),
+            1 => {
+                let o = objects.pop().unwrap();
+                let x: Arc<dyn Object> = Arc::from(o);
                 [x.clone(), x]
             }
-            [a, b] => [Arc::new(a.clone()), Arc::new(b.clone())],
+            2 => {
+                let o2 = objects.pop().unwrap();
+                let o1 = objects.pop().unwrap();
+                [o1.into(), o2.into()]
+            }
             _ => {
                 let axis = bbox.longest_axis();
                 fn cmp_with_axis(
                     f: impl Fn(AxisAlignedBoundingBox) -> f64,
-                ) -> impl Fn(&AnyObject, &AnyObject) -> Ordering {
+                ) -> impl Fn(&Box<dyn Object>, &Box<dyn Object>) -> Ordering {
                     move |a, b| {
                         let a = f(a.bounding_box());
                         let b = f(b.bounding_box());
@@ -45,11 +50,11 @@ impl BvhNode {
                     |o: AxisAlignedBoundingBox| o.z.min
                 }));
                 let mid = objects.len() / 2;
-                let (left, right) = objects.split_at_mut(mid);
-                [
-                    Arc::new(BvhNode::from_objects_mut(left).into()),
-                    Arc::new(BvhNode::from_objects_mut(right).into()),
-                ]
+                let mut right = objects.split_off(mid);
+                let mut left = objects;
+                let a1: Arc<dyn Object> = Arc::new(BvhNode::from_objects_mut(&mut left));
+                let a2: Arc<dyn Object> = Arc::new(BvhNode::from_objects_mut(&mut right));
+                [a1, a2]
             }
         };
 
@@ -57,8 +62,8 @@ impl BvhNode {
     }
 }
 
-impl From<Vec<AnyObject>> for BvhNode {
-    fn from(mut objects: Vec<AnyObject>) -> Self {
+impl From<Vec<Box<dyn Object>>> for BvhNode {
+    fn from(mut objects: Vec<Box<dyn Object>>) -> Self {
         Self::from_objects_mut(&mut objects)
     }
 }

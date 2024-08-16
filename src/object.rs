@@ -43,7 +43,7 @@ impl HitRecord {
     }
 }
 
-pub trait Object {
+pub trait Object: Send + Sync {
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord>;
     fn bounding_box(&self) -> AxisAlignedBoundingBox;
 }
@@ -263,50 +263,19 @@ pub fn box_3d(a: Point, b: Point, mat: impl Into<AnyMaterial>) -> [Quad; 6] {
     ]
 }
 
-macro_rules! generate_any_object {
-    ($($variant:ident),*$(,)?) => {
-        #[derive(Clone)]
-        pub enum AnyObject {
-            $($variant($variant),)*
-        }
-        impl Object for AnyObject {
-            fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
-                match self {
-                    $(AnyObject::$variant(x) => x.hit(r, ray_t),)*
-                }
-            }
-            fn bounding_box(&self) -> AxisAlignedBoundingBox {
-                match self {
-                    $(AnyObject::$variant(x) => x.bounding_box(),)*
-                }
-            }
-        }
-        $(
-            impl From<$variant> for AnyObject {
-                fn from(value: $variant) -> Self {
-                    Self::$variant(value)
-                }
-            }
-        )*
-    };
-}
-
-generate_any_object!(Sphere, Triangle, BvhNode, Quad);
-
 #[derive(Default)]
 pub struct ObjectList {
-    objects: Vec<AnyObject>,
+    objects: Vec<Box<dyn Object>>,
     aabb: AxisAlignedBoundingBox,
 }
 
 impl ObjectList {
-    pub fn add(&mut self, o: impl Into<AnyObject>) {
-        let o = o.into();
+    pub fn add(&mut self, o: impl Object + 'static) {
         self.aabb = self.aabb.merge(o.bounding_box());
-        self.objects.push(o)
+        self.objects.push(Box::new(o))
     }
 
-    pub fn add_all(&mut self, o: impl IntoIterator<Item = impl Into<AnyObject>>) {
+    pub fn add_all(&mut self, o: impl IntoIterator<Item = impl Object + 'static>) {
         o.into_iter().for_each(|v| self.add(v));
     }
 
@@ -317,7 +286,7 @@ impl ObjectList {
 
     pub fn condense(&mut self) {
         let objects = take(&mut self.objects);
-        self.objects.push(BvhNode::from(objects).into())
+        self.objects.push(Box::new(BvhNode::from(objects)))
     }
 }
 
