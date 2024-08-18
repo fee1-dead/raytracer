@@ -74,7 +74,7 @@ pub fn cornell_box() -> Scene {
     let camera = CameraBuilder::new()
         .aspect_ratio(1.0)
         .image_width(600)
-        .samples_per_pixel(1000)
+        .samples_per_pixel(1024)
         .max_depth(50)
         .background(Color::new(0.0, 0.0, 0.0))
         .vfov(40.0)

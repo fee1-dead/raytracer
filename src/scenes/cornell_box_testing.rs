@@ -1,6 +1,6 @@
 use crate::camera::CameraBuilder;
 use crate::color::Color;
-use crate::material::{Dielectric, DiffuseLight, Lambertian, Metal};
+use crate::material::{DiffuseLight, Lambertian, Metal};
 use crate::object::{box_3d, ObjectList, Quad, RotateY, Sphere, Translate};
 use crate::vec3::{Point, Vec3};
 
@@ -45,7 +45,7 @@ pub fn cornell_box_testing() -> Scene {
         white,
     ));
 
-    //let aluminum = Metal::new(Color::new(0.8, 0.85, 0.88), 0.);
+    let aluminum = Metal::new(Color::new(0.8, 0.85, 0.88), 0.);
     let box1 = box_3d(
         Point::new(0.0, 0.0, 0.0),
         Point::new(165.0, 330.0, 165.0),
@@ -55,8 +55,7 @@ pub fn cornell_box_testing() -> Scene {
     let box1 = Translate::new(box1, Vec3(265.0, 0.0, 295.0));
     world.add(box1);
 
-    let glass = Dielectric::new(1.5);
-    let sphere = Sphere::new(Point::new(190., 90., 190.), 90., glass);
+    let sphere = Sphere::new(Point::new(190., 90., 190.), 90., aluminum);
     world.add(sphere);
 
     /*let box2 = box_3d(
@@ -77,7 +76,7 @@ pub fn cornell_box_testing() -> Scene {
 
     let mut lights = ObjectList::default();
     lights.add(light);
-    lights.add(sphere);
+    // lights.add(sphere);
 
     world.add(light);
 

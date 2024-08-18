@@ -109,7 +109,7 @@ impl CameraBuilder {
         let defocus_radius = focus_dist * (defocus_angle / 2.0).to_radians().tan();
         let sqrt_spp = (samples_per_pixel as f64).sqrt() as u64;
         let pixel_samples_scale = 1.0 / (sqrt_spp as f64 * sqrt_spp as f64);
-        let recip_sqrt_spp = 1.0 / sqrt_spp as f64;
+        let recip_sqrt_spp = (sqrt_spp as f64).recip();
         Camera {
             image_width,
             image_height,
@@ -213,8 +213,8 @@ impl Camera {
     /// Returns the vector to a random point in the square sub-pixel specified by grid
     /// indices s_i and s_j for an idealized unit square pixel [-.5,-.5] to [+.5,+.5].
     pub fn sample_square_stratified(&self, s_i: u64, s_j: u64) -> (f64, f64) {
-        let px = ((s_i as f64 + random_double()) * self.recip_sqrt_spp as f64) - 0.5;
-        let py = ((s_j as f64 + random_double()) * self.recip_sqrt_spp as f64) - 0.5;
+        let px = ((s_i as f64 + random_double()) * self.recip_sqrt_spp) - 0.5;
+        let py = ((s_j as f64 + random_double()) * self.recip_sqrt_spp) - 0.5;
         (px, py)
     }
     pub fn defocus_disk_sample(&self) -> Point {
@@ -243,13 +243,10 @@ impl Camera {
             let scattered = Ray { origin: record.point, direction: mixed.generate() };
             let pdf_value = mixed.value(scattered.direction);
 
+            if pdf_value == 0. {
+                return color_from_emission;
+            }
 
-            /*let surface_pdf = CosinePdf::new(record.normal);
-            let scattered = Ray {
-                origin: record.point,
-                direction: surface_pdf.generate(),
-            };
-            let pdf_value = surface_pdf.value(scattered.direction);*/
             let scattering_pdf = record.material.scattering_pdf(&r, &record, &scattered);
             // let pdf_value = scattering_pdf;
 
