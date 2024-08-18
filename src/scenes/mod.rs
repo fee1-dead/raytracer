@@ -10,14 +10,18 @@ pub use simple_light::simple_light;
 mod cornell_box;
 pub use cornell_box::cornell_box;
 
+mod cornell_box_testing;
+pub use cornell_box_testing::cornell_box_testing;
+
 use std::time::{Duration, Instant};
 
 use crate::camera::Camera;
-use crate::object::ObjectList;
+use crate::object::{Object, ObjectList};
 
 pub struct Scene {
     camera: Camera,
     world: ObjectList,
+    light: Box<dyn Object>,
 }
 
 impl Scene {
@@ -38,7 +42,7 @@ impl Scene {
             self.world.condense();
         }
 
-        self.camera.render(self.world)
+        self.camera.render(self.world, &*self.light)
     }
 }
 

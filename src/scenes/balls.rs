@@ -3,7 +3,7 @@ use super::Scene;
 use crate::camera::CameraBuilder;
 use crate::color::Color;
 use crate::material::{AnyMaterial, Dielectric, Lambertian, Metal};
-use crate::object::{ObjectList, Sphere};
+use crate::object::{DummyObject, ObjectList, Sphere};
 use crate::utils::{random_double, random_double_in};
 use crate::vec3::{Point, Vec3};
 
@@ -76,5 +76,5 @@ pub fn balls() -> Scene {
         .background(Color::new(0.7, 0.8, 1.0))
         .build();
 
-    Scene { camera, world }
+    Scene { camera, world, light: Box::new(DummyObject) }
 }

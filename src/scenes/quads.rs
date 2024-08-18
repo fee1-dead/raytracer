@@ -1,7 +1,7 @@
 use crate::camera::CameraBuilder;
 use crate::color::Color;
 use crate::material::Lambertian;
-use crate::object::{ObjectList, Quad};
+use crate::object::{DummyObject, ObjectList, Quad};
 use crate::vec3::{Point, Vec3};
 
 use super::Scene;
@@ -59,5 +59,5 @@ pub fn quads() -> Scene {
         .background(Color::new(0.7, 0.8, 1.0))
         .build();
 
-    Scene { camera, world }
+    Scene { camera, world, light: Box::new(DummyObject) }
 }

@@ -22,12 +22,14 @@ pub fn simple_light() -> Scene {
     ));
 
     let difflight = DiffuseLight(Color::new(4.0, 4.0, 4.0));
-    world.add(Quad::new(
+
+    let light = Quad::new(
         Point::new(3.0, 1.0, -2.0),
         Vec3::new(2.0, 0.0, 0.0),
         Vec3::new(0.0, 2.0, 0.0),
         difflight,
-    ));
+    );
+    world.add(light);
 
     let camera = CameraBuilder::new()
         .aspect_ratio(16.0 / 9.0)
@@ -42,5 +44,5 @@ pub fn simple_light() -> Scene {
         .defocus_angle(0.0)
         .build();
 
-    Scene { camera, world }
+    Scene { camera, world, light: Box::new(light) }
 }

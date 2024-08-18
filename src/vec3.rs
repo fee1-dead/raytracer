@@ -1,4 +1,5 @@
 use std::array;
+use std::f64::consts::PI;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Index, IndexMut, Mul, Neg, Sub, SubAssign};
 
@@ -101,6 +102,18 @@ impl<Token: Vec3Token<Data = f64>> Vec3<Token> {
         }
     }
 
+    pub fn random_cosine_direction() -> Vec3 {
+        let r1 = random_double();
+        let r2 = random_double();
+
+        let phi = 2.0*PI*r1;
+        let x = phi.cos() * r2.sqrt();
+        let y = phi.sin() * r2.sqrt();
+        let z = (1.0-r2).sqrt();
+
+        Vec3(x, y, z)
+    }
+
     pub fn near_zero(self) -> bool {
         let s = 1e-8;
         self.0.abs() < s && self.1.abs() < s && self.2.abs() < s
@@ -115,6 +128,13 @@ impl<Token: Vec3Token<Data = f64>> Vec3<Token> {
         let r_out_perp = etai_over_etat * (self + cos_theta * normal);
         let r_out_parallel = -(1.0 - r_out_perp.length_squared()).abs().sqrt() * normal;
         r_out_perp + r_out_parallel
+    }
+
+    #[track_caller]
+    pub fn assert_finite(self) {
+        for v in self {
+            assert!(v.is_finite());
+        }
     }
 }
 

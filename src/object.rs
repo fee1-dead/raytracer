@@ -1,10 +1,15 @@
+use std::f64::consts::TAU;
 use std::mem::take;
+
+use rand::thread_rng;
 
 use crate::aabb::AxisAlignedBoundingBox;
 use crate::bvh::BvhNode;
 use crate::interval::Interval;
 use crate::material::AnyMaterial;
+use crate::onb::Onb;
 use crate::ray::Ray;
+use crate::utils::random_double;
 use crate::vec3::{Point, Vec3};
 
 pub mod polyhedra;
@@ -46,6 +51,35 @@ impl HitRecord {
 pub trait Object: Send + Sync {
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord>;
     fn bounding_box(&self) -> AxisAlignedBoundingBox;
+    // todo implement more of these
+    fn pdf_value(&self, _origin: Point, _direction: Vec3) -> f64 { 0.0 }
+    fn random(&self, _origin: Point) -> Vec3 { Vec3(1.0, 0.0, 0.0) }
+}
+
+impl<T: Object + ?Sized> Object for &T {
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+        T::hit(*self, r, ray_t)
+    }
+    fn bounding_box(&self) -> AxisAlignedBoundingBox {
+        T::bounding_box(*self)
+    }
+    fn pdf_value(&self, origin: Point, direction: Vec3) -> f64 {
+        T::pdf_value(*self, origin, direction)
+    }
+    fn random(&self, origin: Point) -> Vec3 {
+        T::random(*self, origin)
+    }
+}
+
+pub struct DummyObject;
+
+impl Object for DummyObject {
+    fn hit(&self, _: Ray, _: Interval) -> Option<HitRecord> {
+        None
+    }
+    fn bounding_box(&self) -> AxisAlignedBoundingBox {
+        AxisAlignedBoundingBox::EMPTY
+    }
 }
 
 pub struct Translate<T> {
@@ -178,6 +212,15 @@ impl Sphere {
             aabb,
         }
     }
+    fn random_to_sphere(radius: f64, distance_squared: f64) -> Vec3 {
+        let r1 = random_double();
+        let r2 = random_double();
+        let z = 1. + r2*((1.-radius*radius/distance_squared).sqrt() - 1.);
+        let phi = TAU * r1;
+        let x = phi.cos() - (1.-z*z).sqrt();
+        let y = phi.sin()*(1.-z*z).sqrt();
+        Vec3(x, y, z)
+    }
 }
 
 impl Object for Sphere {
@@ -218,6 +261,23 @@ impl Object for Sphere {
     }
     fn bounding_box(&self) -> AxisAlignedBoundingBox {
         self.aabb
+    }
+    /// TODO: only works for stationary spheres
+    fn pdf_value(&self, origin: Point, direction: Vec3) -> f64 {
+        let Some(_) = self.hit(Ray { origin, direction }, Interval::new(0.001, f64::INFINITY)) else {
+            return 0.;
+        };
+
+        let cos_theta_max = (1. - self.radius*self.radius/(self.center - origin).length_squared()).sqrt();
+        let solid_angle = TAU*(1.-cos_theta_max);
+        solid_angle.recip()
+    }
+
+    fn random(&self, origin: Point) -> Vec3 {
+        let direction = self.center - origin;
+        let distance_squared = direction.length_squared();
+        let uvw = Onb::new(direction);
+        uvw.transform(Self::random_to_sphere(self.radius, distance_squared))
     }
 }
 
@@ -295,6 +355,7 @@ pub struct Quad {
     bbox: AxisAlignedBoundingBox,
     normal: Vec3,
     d: f64,
+    area: f64,
 }
 
 impl Quad {
@@ -314,6 +375,7 @@ impl Quad {
             bbox: bbox1.merge(bbox2),
             normal,
             d,
+            area: n.length(),
         }
     }
 
@@ -350,6 +412,21 @@ impl Object for Quad {
     }
     fn bounding_box(&self) -> AxisAlignedBoundingBox {
         self.bbox
+    }
+    fn pdf_value(&self, origin: Point, direction: Vec3) -> f64 {
+        let Some(rec) = self.hit(Ray { origin, direction }, Interval::new(0.001, f64::INFINITY))
+        else {
+            return 0.;
+        };
+         
+        let distance_squared = rec.t * rec.t * direction.length_squared();
+        let cosine = (direction.dot(rec.normal) / direction.length()).abs();
+
+        distance_squared / (cosine * self.area)
+    }
+    fn random(&self, origin: Point) -> Vec3 {
+        let p = self.q + (random_double() * self.u) + (random_double() * self.v);
+        p - origin
     }
 }
 
@@ -417,5 +494,14 @@ impl Object for ObjectList {
     }
     fn bounding_box(&self) -> AxisAlignedBoundingBox {
         self.aabb
+    }
+    // TODO this is bad
+    fn pdf_value(&self, origin: Point, direction: Vec3) -> f64 {
+        let weight = (self.objects.len() as f64).recip();
+        self.objects.iter().map(|o| weight * o.pdf_value(origin, direction)).sum()
+    }
+    fn random(&self, origin: Point) -> Vec3 {
+        use rand::seq::SliceRandom;
+        self.objects.choose(&mut thread_rng()).unwrap().random(origin)
     }
 }

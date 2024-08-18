@@ -1,16 +1,31 @@
+use std::f64::consts::FRAC_1_PI;
+
 use crate::color::Color;
 use crate::object::HitRecord;
+use crate::pdf::{CosinePdf, Pdf, SpherePdf};
 use crate::ray::Ray;
 use crate::utils::random_double;
 use crate::vec3::{Point, Vec3};
 
+pub struct ScatterRecord {
+    pub attenuation: Color,
+    /// TODO: i'd like this to be an enum
+    pub pdf: Box<dyn Pdf>,
+    /// If this is `Some`, skip pdf and use this ray instead.
+    pub skip_pdf: Option<Ray>,
+}
+
 pub trait Material {
     #[expect(unused_variables)]
     // TODO: no uv because we skipped textures
-    fn emitted(&self, p: Point) -> Color {
+    fn emitted(&self, r_in: &Ray, rec: &HitRecord, p: Point) -> Color {
         Color::default()
     }
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)>;
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord>;
+    #[expect(unused_variables)]
+    fn scattering_pdf(&self, r_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f64 {
+        0.0
+    }
 }
 
 macro_rules! generate_any_material {
@@ -21,14 +36,19 @@ macro_rules! generate_any_material {
         }
 
         impl Material for AnyMaterial {
-            fn emitted(&self, p: Point) -> Color {
+            fn emitted(&self, r_in: &Ray, rec: &HitRecord, p: Point) -> Color {
                 match self {
-                    $(Self::$x(v) => v.emitted(p),)*
+                    $(Self::$x(v) => v.emitted(r_in, rec, p),)*
                 }
             }
-            fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
+            fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
                 match self {
                     $(Self::$x(v) => v.scatter(r_in, rec),)*
+                }
+            }
+            fn scattering_pdf(&self, r_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f64 {
+                match self {
+                    $(Self::$x(v) => v.scattering_pdf(r_in, rec, scattered),)*
                 }
             }
         }
@@ -41,7 +61,16 @@ macro_rules! generate_any_material {
     };
 }
 
-generate_any_material!(Lambertian, Metal, Dielectric, DiffuseLight);
+generate_any_material!(Lambertian, Metal, Dielectric, DiffuseLight, DummyMaterial);
+
+#[derive(Clone, Copy)]
+pub struct DummyMaterial;
+
+impl Material for DummyMaterial {
+    fn scatter(&self, _: &Ray, _: &HitRecord) -> Option<ScatterRecord> {
+        None
+    }
+}
 
 #[derive(Clone, Copy)]
 pub struct Lambertian {
@@ -57,18 +86,16 @@ impl Lambertian {
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, _: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
-        let mut scatter_direction = rec.normal + Vec3::random_unit_vector();
-        if scatter_direction.near_zero() {
-            scatter_direction = rec.normal;
-        }
-        Some((
-            self.albedo,
-            Ray {
-                origin: rec.point,
-                direction: scatter_direction,
-            },
-        ))
+    fn scatter(&self, _: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
+        Some(ScatterRecord {
+            attenuation: self.albedo,
+            pdf: Box::new(CosinePdf::new(rec.normal)),
+            skip_pdf: None,
+        })
+    }
+    fn scattering_pdf(&self, _r_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f64 {
+        let cos_theta = rec.normal.dot(scattered.direction.unit_vector());
+        cos_theta.max(0.0) * FRAC_1_PI
     }
 }
 
@@ -88,7 +115,7 @@ impl Metal {
 }
 
 impl Material for Metal {
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
         let reflected = r_in.direction.reflect(rec.normal);
         let reflected = reflected.unit_vector() + self.fuzziness * Vec3::random_unit_vector();
 
@@ -97,7 +124,12 @@ impl Material for Metal {
                 origin: rec.point,
                 direction: reflected,
             };
-            Some((self.albedo, scattered))
+            
+            Some(ScatterRecord {
+                attenuation: self.albedo,
+                pdf: Box::new(SpherePdf),
+                skip_pdf: Some(scattered),
+            })
         } else {
             None
         }
@@ -122,7 +154,7 @@ impl Dielectric {
 }
 
 impl Material for Dielectric {
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<(Color, Ray)> {
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord> {
         let ri = if rec.front_face {
             self.refraction_index.recip()
         } else {
@@ -145,7 +177,11 @@ impl Material for Dielectric {
             origin: rec.point,
             direction,
         };
-        Some((Color::new(1.0, 1.0, 1.0), ray))
+        Some(ScatterRecord {
+            attenuation: Color::splat(1.),
+            pdf: Box::new(SpherePdf),
+            skip_pdf: Some(ray),
+        })
     }
 }
 
@@ -153,10 +189,14 @@ impl Material for Dielectric {
 pub struct DiffuseLight(pub Color);
 
 impl Material for DiffuseLight {
-    fn emitted(&self, _: Point) -> Color {
-        self.0
+    fn emitted(&self, _r_in: &Ray, rec: &HitRecord, _: Point) -> Color {
+        if !rec.front_face {
+            Color::splat(0.)
+        } else {
+            self.0
+        }
     }
-    fn scatter(&self, _: &Ray, _: &HitRecord) -> Option<(Color, Ray)> {
+    fn scatter(&self, _: &Ray, _: &HitRecord) -> Option<ScatterRecord> {
         None
     }
 }
