@@ -1,10 +1,11 @@
-use std::cmp::Ordering;
+use core::cmp::Ordering;
 use std::sync::Arc;
 
-use crate::aabb::AxisAlignedBoundingBox;
-use crate::interval::Interval;
-use crate::object::{HitRecord, Object};
-use crate::ray::Ray;
+
+use common::aabb::AxisAlignedBoundingBox;
+use common::interval::Interval;
+use common::object::{HitRecord, Object};
+use common::ray::Ray;
 
 #[derive(Clone)]
 pub struct BvhNode {

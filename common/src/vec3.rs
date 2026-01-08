@@ -1,9 +1,14 @@
-use std::array;
-use std::f64::consts::PI;
-use std::iter::Sum;
-use std::ops::{Add, AddAssign, Div, Index, IndexMut, Mul, Neg, Sub, SubAssign};
+use core::array;
+use core::f64::consts::PI;
+use core::iter::Sum;
+use core::ops::{Add, AddAssign, Div, Index, IndexMut, Mul, Neg, Sub, SubAssign};
+
+use rand::rngs::SmallRng;
+use spirv_std::num_traits::Float;
 
 use crate::utils::{random_double, random_double_in};
+
+// use crate::utils::{random_double, random_double_in};
 
 pub trait Vec3Token {
     type Data: Copy
@@ -52,49 +57,49 @@ impl<Token: Vec3Token> Vec3<Token> {
 
 impl<Token: Vec3Token<Data = f64>> Vec3<Token> {
     pub fn length(self) -> f64 {
-        self.length_squared().sqrt()
+        Float::sqrt(self.length_squared())
     }
 
     pub fn unit_vector(self) -> Self {
         self / self.length()
     }
 
-    pub fn random() -> Self {
-        Self(random_double(), random_double(), random_double())
+    pub fn random(r: &mut SmallRng) -> Self {
+        Self(random_double(r), random_double(r), random_double(r))
     }
 
-    pub fn random_in(min: f64, max: f64) -> Self {
+    pub fn random_in(r: &mut SmallRng, min: f64, max: f64) -> Self {
         Self(
-            random_double_in(min, max),
-            random_double_in(min, max),
-            random_double_in(min, max),
+            random_double_in(r, min, max),
+            random_double_in(r, min, max),
+            random_double_in(r, min, max),
         )
     }
 
-    pub fn random_in_unit_sphere() -> Self {
+    pub fn random_in_unit_sphere(r: &mut SmallRng) -> Self {
         loop {
-            let p = Self::random_in(-1.0, 1.0);
+            let p = Self::random_in(r, -1.0, 1.0);
             if p.length_squared() < 1.0 {
                 return p;
             }
         }
     }
 
-    pub fn random_in_unit_disk() -> Self {
+    pub fn random_in_unit_disk(r: &mut SmallRng) -> Self {
         loop {
-            let p = Vec3(random_double(), random_double(), 0.0);
+            let p = Vec3(random_double(r), random_double(r), 0.0);
             if p.length_squared() < 1.0 {
                 return p;
             }
         }
     }
 
-    pub fn random_unit_vector() -> Self {
-        Self::random_in_unit_sphere().unit_vector()
+    pub fn random_unit_vector(r: &mut SmallRng) -> Self {
+        Self::random_in_unit_sphere(r).unit_vector()
     }
 
-    pub fn random_on_hemisphere(normal: Self) -> Self {
-        let on_unit_sphere = Self::random_unit_vector();
+    pub fn random_on_hemisphere(r: &mut SmallRng, normal: Self) -> Self {
+        let on_unit_sphere = Self::random_unit_vector(r);
         if on_unit_sphere.dot(normal) > 0.0 {
             on_unit_sphere
         } else {
@@ -102,9 +107,9 @@ impl<Token: Vec3Token<Data = f64>> Vec3<Token> {
         }
     }
 
-    pub fn random_cosine_direction() -> Vec3 {
-        let r1 = random_double();
-        let r2 = random_double();
+    pub fn random_cosine_direction(r: &mut SmallRng) -> Vec3 {
+        let r1 = random_double(r);
+        let r2 = random_double(r);
 
         let phi = 2.0*PI*r1;
         let x = phi.cos() * r2.sqrt();

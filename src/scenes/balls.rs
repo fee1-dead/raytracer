@@ -3,11 +3,13 @@ use super::Scene;
 use crate::camera::CameraBuilder;
 use crate::color::Color;
 use crate::material::{AnyMaterial, Dielectric, Lambertian, Metal};
-use crate::object::{DummyObject, ObjectList, Sphere};
+use common::object::*;
+use rand::rngs::SmallRng;
+use crate::object::{ObjectList};
 use crate::utils::{random_double, random_double_in};
 use crate::vec3::{Point, Vec3};
 
-pub fn balls() -> Scene {
+pub fn balls(r: &mut SmallRng) -> Scene {
     let mut world = ObjectList::default();
 
     let ground_material = Lambertian::new((0.5, 0.5, 0.5));
@@ -19,20 +21,20 @@ pub fn balls() -> Scene {
 
     for a in -11..11 {
         for b in -11..11 {
-            let choose_mat = random_double();
+            let choose_mat = random_double(r);
             let center = Point::new(
-                a as f64 + 0.9 * random_double(),
+                a as f64 + 0.9 * random_double(r),
                 0.2,
-                b as f64 + 0.9 * random_double(),
+                b as f64 + 0.9 * random_double(r),
             );
 
             if (center - Point::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 let material = if choose_mat < 0.8 {
-                    let albedo = Color::random() * Color::random();
+                    let albedo = Color::random(r) * Color::random(r);
                     AnyMaterial::from(Lambertian::new(albedo))
                 } else if choose_mat < 0.95 {
-                    let albedo = Color::random_in(0.5, 1.0);
-                    let fuzziness = random_double_in(0.0, 0.5);
+                    let albedo = Color::random_in(r, 0.5, 1.0);
+                    let fuzziness = random_double_in(r, 0.0, 0.5);
                     Metal::new(albedo, fuzziness).into()
                 } else {
                     Dielectric::new(1.5).into()

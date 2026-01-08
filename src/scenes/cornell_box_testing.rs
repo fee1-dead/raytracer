@@ -1,7 +1,8 @@
 use crate::camera::CameraBuilder;
 use crate::color::Color;
 use crate::material::{DiffuseLight, Lambertian, Metal};
-use crate::object::{box_3d, ObjectList, Quad, RotateY, Sphere, Translate};
+use crate::object::{box_3d, ObjectList};
+use common::object::*;
 use crate::vec3::{Point, Vec3};
 
 use super::Scene;
@@ -15,27 +16,27 @@ pub fn cornell_box_testing() -> Scene {
     let light = DiffuseLight(Color::new(15.0, 15.0, 15.0));
 
     world.add(Quad::new(
-        Point::new(555.0, 0.0, 0.0),
+        Point::new(555.0, 0.0, 555.0),
         Vec3::new(0.0, 555.0, 0.0),
-        Vec3::new(0.0, 0.0, 555.0),
+        Vec3::new(0.0, 0.0, -1110.0),
         green,
     ));
     world.add(Quad::new(
-        Point::new(0.0, 0.0, 0.0),
+        Point::new(0.0, 0.0, 555.0),
         Vec3::new(0.0, 555.0, 0.0),
-        Vec3::new(0.0, 0.0, 555.0),
+        Vec3::new(0.0, 0.0, -1110.0),
         red,
     ));
     world.add(Quad::new(
-        Point::new(0.0, 0.0, 0.0),
+        Point::new(0.0, 0.0, 555.0),
         Vec3::new(555.0, 0.0, 0.0),
-        Vec3::new(0.0, 0.0, 555.0),
+        Vec3::new(0.0, 0.0, -1110.0),
         white,
     ));
     world.add(Quad::new(
         Point::new(555.0, 555.0, 555.0),
         Vec3::new(-555.0, 0.0, 0.0),
-        Vec3::new(0.0, 0.0, -555.0),
+        Vec3::new(0.0, 0.0, -1110.0),
         white,
     ));
     world.add(Quad::new(
@@ -44,6 +45,14 @@ pub fn cornell_box_testing() -> Scene {
         Vec3::new(0.0, 555.0, 0.0),
         white,
     ));
+
+    world.add(Quad::new(
+        Point::new(0.0, 0.0, -555.0),
+        Vec3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 555.0, 0.0),
+        white,
+    ));
+
 
     let aluminum = Metal::new(Color::new(0.8, 0.85, 0.88), 0.);
     let box1 = box_3d(
@@ -57,15 +66,6 @@ pub fn cornell_box_testing() -> Scene {
 
     let sphere = Sphere::new(Point::new(190., 90., 190.), 90., aluminum);
     world.add(sphere);
-
-    /*let box2 = box_3d(
-        Point::new(0.0, 0.0, 0.0),
-        Point::new(165.0, 165.0, 165.0),
-        white,
-    );
-    let box2 = RotateY::new(box2, -18.0);
-    let box2 = Translate::new(box2, Vec3(130.0, 0.0, 65.0));
-    world.add(box2);*/
 
     let light = Quad::new(
         Point::new(343.0, 554.0, 332.0),
@@ -82,12 +82,12 @@ pub fn cornell_box_testing() -> Scene {
 
     let camera = CameraBuilder::new()
         .aspect_ratio(1.0)
-        .image_width(600)
-        .samples_per_pixel(1000)
+        .image_width(5000)
+        .samples_per_pixel(1)
         .max_depth(50)
         .background(Color::new(0.0, 0.0, 0.0))
-        .vfov(40.0)
-        .look_from(Point::new(278.0, 278.0, -800.0))
+        .vfov(50.0)
+        .look_from(Point::new(278.0, 278.0, -550.0))
         .look_at(Point::new(278.0, 278.0, 0.0))
         .vup(Vec3(0.0, 1.0, 0.0))
         .defocus_angle(0.0)

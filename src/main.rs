@@ -1,19 +1,10 @@
-pub mod aabb;
 pub mod bvh;
-pub mod camera;
-mod color;
-mod interval;
-pub mod material;
 pub mod object;
-mod ray;
 pub mod scenes;
-mod utils;
-pub(crate) mod vec3;
-mod onb;
-mod pdf;
+pub use common::*;
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    scenes::cornell_box().render_with_metrics()?;
+    scenes::cornell_box_testing().render()?;
     Ok(())
 }

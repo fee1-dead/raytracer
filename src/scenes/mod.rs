@@ -2,6 +2,7 @@ mod balls;
 pub use balls::balls;
 
 mod quads;
+use image::ColorType;
 pub use quads::quads;
 
 mod simple_light;
@@ -42,7 +43,17 @@ impl Scene {
             self.world.condense();
         }
 
-        self.camera.render(self.world, &*self.light)
+        let mut buf = vec![0; self.camera.buffer_len()];
+
+        self.camera.render(&self.world, &*self.light, &mut buf);
+        image::save_buffer(
+            "./image.png",
+            &buf,
+            self.camera.image_width as u32,
+            self.camera.image_height as u32,
+            ColorType::Rgb8,
+        )?;
+        Ok(())
     }
 }
 

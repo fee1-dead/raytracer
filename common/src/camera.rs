@@ -1,11 +1,10 @@
-use image::ExtendedColorType;
-use rayon::iter::{IndexedParallelIterator, ParallelIterator};
-use rayon::slice::ParallelSliceMut;
+use rand::SeedableRng;
+use rand::rngs::SmallRng;
 
 use crate::color::Color;
 use crate::interval::Interval;
 use crate::material::Material;
-use crate::object::{Object, ObjectList};
+use crate::object::Object;
 use crate::pdf::{MixturePdf, ObjectPdf, Pdf};
 use crate::ray::Ray;
 use crate::utils::random_double;
@@ -131,8 +130,8 @@ impl CameraBuilder {
 
 #[derive(Clone, Copy)]
 pub struct Camera {
-    image_width: u64,
-    image_height: u64,
+    pub image_width: u64,
+    pub image_height: u64,
     background: Color,
     pixel00_loc: Point,
     pixel_delta_u: Vec3,
@@ -153,47 +152,46 @@ impl Camera {
     pub fn num_pixels(&self) -> u64 {
         self.image_height * self.image_width
     }
-    pub fn render(self, world: ObjectList, lights: &dyn Object) -> color_eyre::Result<()> {
+    pub fn buffer_len(&self) -> usize {
+        (self.image_height * self.image_width * 3) as usize
+    }
+    /// render into a rgb8 buffer. `buf` must be height * width * 3 in size.
+    pub fn render(self, world: &dyn Object, lights: &dyn Object, buf: &mut [u8]) {
         let Camera {
             image_width,
-            image_height,
+            image_height: _,
             pixel_samples_scale,
             ..
         } = self;
 
-        let mut buffer = vec![0u8; (image_height * image_width * 3) as usize];
+        assert_eq!(self.buffer_len() as usize, buf.len());
 
-        buffer
-            .par_chunks_exact_mut(3 * image_width as usize)
+        // todo: figure out per thread small rng once gpu transitioned
+        let mut rng = SmallRng::seed_from_u64(42);
+
+        buf
+            .chunks_exact_mut(3 * image_width as usize)
             .enumerate()
             .for_each(|(j, buf)| {
-                buf.par_chunks_exact_mut(3)
+                buf.chunks_exact_mut(3)
                     .enumerate()
                     .for_each(|(i, buf)| {
                         let mut pixel_color = Color::new(0.0, 0.0, 0.0);
                         for s_i in 0..self.sqrt_spp {
                             for s_j in 0..self.sqrt_spp {
-                                let ray = self.get_ray(i as u64, j as u64, s_i, s_j);
-                                pixel_color += self.ray_color(ray, self.max_depth, &world, &lights);
+                                let ray = self.get_ray(&mut rng, i as u64, j as u64, s_i, s_j);
+                                pixel_color += self.ray_color(&mut rng, ray, self.max_depth, &world, &lights);
                                 pixel_color.assert_finite();
                             }
                         }
                         (pixel_samples_scale * pixel_color).write_to_buf(buf);
                     })
             });
-        image::save_buffer(
-            "image.png",
-            &buffer,
-            image_width as u32,
-            image_height as u32,
-            ExtendedColorType::Rgb8,
-        )?;
-        Ok(())
     }
     /// A ray originating from the defocus disk and directed at a random point around
     /// the pixel located at i, j for stratified sample square s_i, s_j.
-    pub fn get_ray(&self, i: u64, j: u64, s_i: u64, s_j: u64) -> Ray {
-        let (offset_x, offset_y) = self.sample_square_stratified(s_i, s_j);
+    pub fn get_ray(&self, r: &mut SmallRng, i: u64, j: u64, s_i: u64, s_j: u64) -> Ray {
+        let (offset_x, offset_y) = self.sample_square_stratified(r, s_i, s_j);
 
         let pixel_sample = self.pixel00_loc
             + ((i as f64 + offset_x) * self.pixel_delta_u)
@@ -201,46 +199,46 @@ impl Camera {
         let origin = if self.defocus_angle <= 0.0 {
             self.center
         } else {
-            self.defocus_disk_sample()
+            self.defocus_disk_sample(r)
         };
         let direction = pixel_sample - origin;
         Ray { origin, direction }
     }
     /// vector to a random point in the square from (-0.5, -0.5) to (0.5, 0.5)
-    pub fn sample_square() -> (f64, f64) {
-        (random_double() - 0.5, random_double() - 0.5)
+    pub fn sample_square(r: &mut SmallRng) -> (f64, f64) {
+        (random_double(r) - 0.5, random_double(r) - 0.5)
     }
     /// Returns the vector to a random point in the square sub-pixel specified by grid
     /// indices s_i and s_j for an idealized unit square pixel [-.5,-.5] to [+.5,+.5].
-    pub fn sample_square_stratified(&self, s_i: u64, s_j: u64) -> (f64, f64) {
-        let px = ((s_i as f64 + random_double()) * self.recip_sqrt_spp) - 0.5;
-        let py = ((s_j as f64 + random_double()) * self.recip_sqrt_spp) - 0.5;
+    pub fn sample_square_stratified(&self, r: &mut SmallRng, s_i: u64, s_j: u64) -> (f64, f64) {
+        let px = ((s_i as f64 + random_double(r)) * self.recip_sqrt_spp) - 0.5;
+        let py = ((s_j as f64 + random_double(r)) * self.recip_sqrt_spp) - 0.5;
         (px, py)
     }
-    pub fn defocus_disk_sample(&self) -> Point {
-        let p = Point::random_in_unit_disk();
+    pub fn defocus_disk_sample(&self, r: &mut SmallRng) -> Point {
+        let p = Point::random_in_unit_disk(r);
         self.center + (p.0 * self.defocus_disk_u) + (p.1 * self.defocus_disk_v)
     }
     // todo condense params
-    pub fn ray_color(&self, r: Ray, depth: u64, world: &ObjectList, lights: &dyn Object) -> Color {
+    pub fn ray_color(&self, rng: &mut SmallRng, r: Ray, depth: u64, world: &dyn Object, lights: &dyn Object) -> Color {
         if depth == 0 {
             return Color::new(0.0, 0.0, 0.0);
         }
         if let Some(record) = world.hit(r, Interval::new(0.001, f64::INFINITY)) {
             let color_from_emission = record.material.emitted(&r, &record, record.point);
             color_from_emission.assert_finite();
-            let Some(srec) = record.material.scatter(&r, &record) else {
+            let Some(srec) = record.material.scatter(rng, &r, &record) else {
                 return color_from_emission;
             };
 
             if let Some(ray) = srec.skip_pdf {
-                return srec.attenuation * self.ray_color(ray, depth-1, world, lights)
+                return srec.attenuation * self.ray_color(rng, ray, depth-1, world, lights)
             }
 
             let light_pdf = ObjectPdf::new(lights, record.point);
             let mixed = MixturePdf::new(light_pdf, srec.pdf);
         
-            let scattered = Ray { origin: record.point, direction: mixed.generate() };
+            let scattered = Ray { origin: record.point, direction: mixed.generate(rng) };
             let pdf_value = mixed.value(scattered.direction);
 
             if pdf_value == 0. {
@@ -250,7 +248,7 @@ impl Camera {
             let scattering_pdf = record.material.scattering_pdf(&r, &record, &scattered);
             // let pdf_value = scattering_pdf;
 
-            let sample_color = self.ray_color(scattered, depth-1, world, lights);
+            let sample_color = self.ray_color(rng, scattered, depth-1, world, lights);
 
             let color_from_scatter =
                 srec.attenuation * scattering_pdf * sample_color

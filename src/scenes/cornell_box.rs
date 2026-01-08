@@ -1,7 +1,8 @@
 use crate::camera::CameraBuilder;
 use crate::color::Color;
 use crate::material::{DiffuseLight, Lambertian};
-use crate::object::{box_3d, ObjectList, Quad, RotateY, Translate};
+use crate::object::{box_3d, ObjectList};
+use common::object::*;
 use crate::vec3::{Point, Vec3};
 
 use super::Scene;
@@ -73,7 +74,7 @@ pub fn cornell_box() -> Scene {
 
     let camera = CameraBuilder::new()
         .aspect_ratio(1.0)
-        .image_width(600)
+        .image_width(5000)
         .samples_per_pixel(1024)
         .max_depth(50)
         .background(Color::new(0.0, 0.0, 0.0))

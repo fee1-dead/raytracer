@@ -1,6 +1,7 @@
-use std::f64::consts::{FRAC_1_PI, PI};
+use core::f64::consts::{FRAC_1_PI, PI};
 
-use rand::random;
+use rand::Rng;
+use rand::rngs::SmallRng;
 
 use crate::object::Object;
 use crate::onb::Onb;
@@ -8,15 +9,26 @@ use crate::vec3::{Point, Vec3};
 
 pub trait Pdf {
     fn value(&self, direction: Vec3) -> f64;
-    fn generate(&self) -> Vec3;
+    fn generate(&self, r: &mut SmallRng) -> Vec3;
 }
 
-impl<T: Pdf + ?Sized> Pdf for Box<T> {
+pub enum AnyPdf {
+    Sphere(SpherePdf),
+    Cosine(CosinePdf),
+}
+
+impl Pdf for AnyPdf {
     fn value(&self, direction: Vec3) -> f64 {
-        T::value(&**self, direction)
+        match self {
+            Self::Cosine(c) => c.value(direction),
+            Self::Sphere(s) => s.value(direction)
+        }
     }
-    fn generate(&self) -> Vec3 {
-        T::generate(&**self)
+    fn generate(&self, r: &mut SmallRng) -> Vec3 {
+        match self {
+            Self::Cosine(c) => c.generate(r),
+            Self::Sphere(s) => s.generate(r)
+        }
     }
 }
 
@@ -26,8 +38,8 @@ impl Pdf for SpherePdf {
     fn value(&self, _: Vec3) -> f64 {
         1. / (4. * PI)
     }
-    fn generate(&self) -> Vec3 {
-        Vec3::random_unit_vector()
+    fn generate(&self, r: &mut SmallRng) -> Vec3 {
+        Vec3::random_unit_vector(r)
     }
 }
 
@@ -44,8 +56,8 @@ impl Pdf for CosinePdf {
         let cosine_theta = direction.unit_vector().dot(self.0.w());
         0.0f64.max(cosine_theta * FRAC_1_PI)
     }
-    fn generate(&self) -> Vec3 {
-        self.0.transform(Point::random_cosine_direction())
+    fn generate(&self, r: &mut SmallRng) -> Vec3 {
+        self.0.transform(Point::random_cosine_direction(r))
     }
 }
 
@@ -64,8 +76,8 @@ impl<T: Object> Pdf for ObjectPdf<T> {
     fn value(&self, direction: Vec3) -> f64 {
         self.object.pdf_value(self.origin, direction)
     }
-    fn generate(&self) -> Vec3 {
-        self.object.random(self.origin)
+    fn generate(&self, r: &mut SmallRng) -> Vec3 {
+        self.object.random(r, self.origin)
     }
 }
 
@@ -81,11 +93,11 @@ impl<A: Pdf, B: Pdf> Pdf for MixturePdf<A, B> {
     fn value(&self, direction: Vec3) -> f64 {
         0.5*self.0.value(direction) + 0.5*self.1.value(direction)
     }
-    fn generate(&self) -> Vec3 {
-        if random() {
-            self.0.generate()
+    fn generate(&self, r: &mut SmallRng) -> Vec3 {
+        if r.random_bool(0.5) {
+            self.0.generate(r)
         } else {
-            self.1.generate()
+            self.1.generate(r)
         }
     }
 }

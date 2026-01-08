@@ -1,7 +1,7 @@
-use crate::material::AnyMaterial;
-use crate::vec3::Point;
+use common::material::AnyMaterial;
+use common::vec3::Point;
 
-use super::Triangle;
+use common::object::Triangle;
 
 pub fn tetrahedron(a: Point, b: Point, c: Point, d: Point, m: AnyMaterial) -> [Triangle; 4] {
     [
