@@ -6,6 +6,10 @@ use image::ColorType;
 pub use quads::quads;
 
 mod simple_light;
+use rand::SeedableRng;
+use rand::rngs::SmallRng;
+use rayon::iter::{IndexedParallelIterator, ParallelIterator};
+use rayon::slice::ParallelSliceMut;
 pub use simple_light::simple_light;
 
 mod cornell_box;
@@ -44,8 +48,15 @@ impl Scene {
         }
 
         let mut buf = vec![0; self.camera.buffer_len()];
+        let width = self.camera.image_width as usize;
 
-        self.camera.render(&self.world, &*self.light, &mut buf);
+        buf.par_chunks_exact_mut(3).enumerate().for_each(|(pixel, chunk)| {
+            let mut rng = SmallRng::seed_from_u64(pixel as u64);
+            let i = pixel % width;
+            let j = pixel / width;
+            self.camera.render_single(&mut rng, &self.world, &*self.light, i as u64, j as u64).write_to_buf(chunk);
+        });
+
         image::save_buffer(
             "./image.png",
             &buf,

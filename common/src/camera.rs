@@ -155,12 +155,28 @@ impl Camera {
     pub fn buffer_len(&self) -> usize {
         (self.image_height * self.image_width * 3) as usize
     }
+    pub fn render_single(
+        &self,
+        rng: &mut SmallRng,
+        world: &dyn Object,
+        lights: &dyn Object,
+        i: u64,
+        j: u64,
+    ) -> Color {
+        let mut pixel_color = Color::new(0.0, 0.0, 0.0);
+        for s_i in 0..self.sqrt_spp {
+            for s_j in 0..self.sqrt_spp {
+                let ray = self.get_ray(rng, i as u64, j as u64, s_i, s_j);
+                pixel_color += self.ray_color(rng, ray, self.max_depth, &world, &lights);
+                pixel_color.assert_finite();
+            }
+        }
+        self.pixel_samples_scale * pixel_color
+    }
     /// render into a rgb8 buffer. `buf` must be height * width * 3 in size.
     pub fn render(self, world: &dyn Object, lights: &dyn Object, buf: &mut [u8]) {
         let Camera {
             image_width,
-            image_height: _,
-            pixel_samples_scale,
             ..
         } = self;
 
@@ -169,23 +185,12 @@ impl Camera {
         // todo: figure out per thread small rng once gpu transitioned
         let mut rng = SmallRng::seed_from_u64(42);
 
-        buf
-            .chunks_exact_mut(3 * image_width as usize)
+        buf.chunks_exact_mut(3 * image_width as usize)
             .enumerate()
             .for_each(|(j, buf)| {
-                buf.chunks_exact_mut(3)
-                    .enumerate()
-                    .for_each(|(i, buf)| {
-                        let mut pixel_color = Color::new(0.0, 0.0, 0.0);
-                        for s_i in 0..self.sqrt_spp {
-                            for s_j in 0..self.sqrt_spp {
-                                let ray = self.get_ray(&mut rng, i as u64, j as u64, s_i, s_j);
-                                pixel_color += self.ray_color(&mut rng, ray, self.max_depth, &world, &lights);
-                                pixel_color.assert_finite();
-                            }
-                        }
-                        (pixel_samples_scale * pixel_color).write_to_buf(buf);
-                    })
+                buf.chunks_exact_mut(3).enumerate().for_each(|(i, buf)| {
+                    self.render_single(&mut rng, world, lights, i as u64, j as u64).write_to_buf(buf);
+                })
             });
     }
     /// A ray originating from the defocus disk and directed at a random point around
@@ -220,7 +225,14 @@ impl Camera {
         self.center + (p.0 * self.defocus_disk_u) + (p.1 * self.defocus_disk_v)
     }
     // todo condense params
-    pub fn ray_color(&self, rng: &mut SmallRng, r: Ray, depth: u64, world: &dyn Object, lights: &dyn Object) -> Color {
+    pub fn ray_color(
+        &self,
+        rng: &mut SmallRng,
+        r: Ray,
+        depth: u64,
+        world: &dyn Object,
+        lights: &dyn Object,
+    ) -> Color {
         if depth == 0 {
             return Color::new(0.0, 0.0, 0.0);
         }
@@ -232,13 +244,16 @@ impl Camera {
             };
 
             if let Some(ray) = srec.skip_pdf {
-                return srec.attenuation * self.ray_color(rng, ray, depth-1, world, lights)
+                return srec.attenuation * self.ray_color(rng, ray, depth - 1, world, lights);
             }
 
             let light_pdf = ObjectPdf::new(lights, record.point);
             let mixed = MixturePdf::new(light_pdf, srec.pdf);
-        
-            let scattered = Ray { origin: record.point, direction: mixed.generate(rng) };
+
+            let scattered = Ray {
+                origin: record.point,
+                direction: mixed.generate(rng),
+            };
             let pdf_value = mixed.value(scattered.direction);
 
             if pdf_value == 0. {
@@ -248,11 +263,9 @@ impl Camera {
             let scattering_pdf = record.material.scattering_pdf(&r, &record, &scattered);
             // let pdf_value = scattering_pdf;
 
-            let sample_color = self.ray_color(rng, scattered, depth-1, world, lights);
+            let sample_color = self.ray_color(rng, scattered, depth - 1, world, lights);
 
-            let color_from_scatter =
-                srec.attenuation * scattering_pdf * sample_color
-                    / pdf_value;
+            let color_from_scatter = srec.attenuation * scattering_pdf * sample_color / pdf_value;
             color_from_scatter.assert_finite();
 
             color_from_emission + color_from_scatter
