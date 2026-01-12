@@ -4,6 +4,7 @@ use crate::interval::Interval;
 use crate::ray::Ray;
 use crate::vec3::{Point, Vec3};
 
+#[repr(C)]
 #[derive(Clone, Copy, Default)]
 pub struct AxisAlignedBoundingBox {
     pub x: Interval,

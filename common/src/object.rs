@@ -70,6 +70,15 @@ impl<T: Object + ?Sized> Object for &T {
     }
 }
 
+pub enum AnyObject {
+    Dummy,
+    Translate(Translate<&'static AnyObject>),
+    RotateY(RotateY<&'static AnyObject>),
+    Sphere(Sphere),
+    Triangle(Triangle),
+    Quad(Quad),
+}
+
 pub struct DummyObject;
 
 impl Object for DummyObject {

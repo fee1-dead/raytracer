@@ -3,6 +3,7 @@
 #![feature(core_float_math, core_intrinsics)]
 
 pub mod aabb;
+pub mod ffi;
 pub mod vec3;
 pub mod ray;
 pub mod interval;
