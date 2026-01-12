@@ -1,6 +1,9 @@
 use crate::interval::Interval;
 use crate::vec3::{Vec3, Vec3Token};
 
+#[cfg(not(test))]
+use crate::Float;
+
 pub struct ColorToken;
 
 impl Vec3Token for ColorToken {

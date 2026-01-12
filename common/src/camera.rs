@@ -9,6 +9,8 @@ use crate::pdf::{MixturePdf, ObjectPdf, Pdf};
 use crate::ray::Ray;
 use crate::utils::random_double;
 use crate::vec3::{Point, Vec3};
+#[cfg(not(test))]
+use crate::Float;
 
 pub struct CameraBuilder {
     aspect_ratio: f64,

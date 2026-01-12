@@ -10,6 +10,9 @@ use crate::ray::Ray;
 use crate::utils::random_double;
 use crate::vec3::{Point, Vec3};
 
+#[cfg(not(test))]
+use crate::Float;
+
 #[derive(Clone, Copy)]
 pub struct HitRecord {
     pub point: Point,

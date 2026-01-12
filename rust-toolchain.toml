@@ -1,0 +1,4 @@
+[toolchain]
+channel = "nightly-2026-01-10"
+components = [ "llvm-bitcode-linker", "llvm-tools" ]
+targets = [ "nvptx64-nvidia-cuda" ]

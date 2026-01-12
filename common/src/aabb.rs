@@ -105,10 +105,3 @@ impl Add<Vec3> for AxisAlignedBoundingBox {
     }
 }
 
-impl Add<f64> for Interval {
-    type Output = Interval;
-
-    fn add(self, rhs: f64) -> Interval {
-        Interval::new(self.min + rhs, self.max + rhs)
-    }
-}

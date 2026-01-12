@@ -9,6 +9,9 @@ use crate::ray::Ray;
 use crate::utils::random_double;
 use crate::vec3::{Point, Vec3};
 
+#[cfg(not(test))]
+use crate::Float;
+
 pub struct ScatterRecord {
     pub attenuation: Color,
     pub pdf: AnyPdf,

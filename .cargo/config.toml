@@ -1,2 +1,6 @@
 [build]
 # rustflags = ["-C", "target-cpu=native"]
+
+
+[target.nvptx64-nvidia-cuda]
+rustflags = ["-Ctarget-cpu=sm_89", "-Clinker-flavor=llbc", "-Zunstable-options"]

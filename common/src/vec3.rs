@@ -4,7 +4,8 @@ use core::iter::Sum;
 use core::ops::{Add, AddAssign, Div, Index, IndexMut, Mul, Neg, Sub, SubAssign};
 
 use rand::rngs::SmallRng;
-use spirv_std::num_traits::Float;
+
+use crate::Float;
 
 use crate::utils::{random_double, random_double_in};
 
