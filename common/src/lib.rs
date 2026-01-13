@@ -1,6 +1,7 @@
-#![no_std]
+#![cfg_attr(target_arch = "nvptx64", no_std)]
 #![allow(internal_features)]
-#![feature(core_float_math, core_intrinsics, abi_gpu_kernel, stdarch_nvptx)]
+#![feature(core_float_math, core_intrinsics, abi_gpu_kernel)]
+#![cfg_attr(target_arch = "nvptx64", feature(stdarch_nvptx))]
 
 pub mod aabb;
 pub mod ffi;
@@ -28,19 +29,19 @@ pub trait Float: Copy + Sized {
 
 impl Float for f64 {
     fn cos(self) -> Self {
-        core::intrinsics::cosf64(self)
+        libm::cos(self)
     }
     fn sin(self) -> Self {
-        core::intrinsics::sinf64(self)
+        libm::sin(self)
     }
     fn tan(self) -> Self {
-        self.sin() / self.cos()
+        libm::tan(self)
     }
     fn sqrt(self) -> Self {
-        core::f64::math::sqrt(self)
+        libm::sqrt(self)
     }
     fn powi(self, n: i32) -> Self {
-        core::f64::math::powi(self, n)
+        libm::pow(self, n as f64)
     }
 }
 

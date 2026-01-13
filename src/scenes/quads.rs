@@ -6,7 +6,7 @@ use crate::vec3::{Point, Vec3};
 
 use super::Scene;
 
-pub fn quads() -> Scene {
+pub fn quads() -> Scene<DummyObject> {
     let mut world = ObjectList::default();
     let left_red = Lambertian::new((1.0, 0.2, 0.2));
     let back_green = Lambertian::new((0.2, 1.0, 0.2));
@@ -59,5 +59,5 @@ pub fn quads() -> Scene {
         .background(Color::new(0.7, 0.8, 1.0))
         .build();
 
-    Scene { camera, world, light: Box::new(DummyObject) }
+    Scene { camera, world, light: DummyObject }
 }

@@ -23,13 +23,13 @@ use std::time::{Duration, Instant};
 use crate::camera::Camera;
 use crate::object::{Object, ObjectList};
 
-pub struct Scene {
+pub struct Scene<L: Object> {
     camera: Camera,
     world: ObjectList,
-    light: Box<dyn Object>,
+    light: L,
 }
 
-impl Scene {
+impl<L: Object> Scene<L> {
     pub fn render_with_metrics(self) -> color_eyre::Result<()> {
         let time = Instant::now();
         let pixels = self.camera.num_pixels();
@@ -54,7 +54,7 @@ impl Scene {
             let mut rng = SmallRng::seed_from_u64(pixel as u64);
             let i = pixel % width;
             let j = pixel / width;
-            self.camera.render_single(&mut rng, &self.world, &*self.light, i as u64, j as u64).write_to_buf(chunk);
+            self.camera.render_single(&mut rng, &self.world, &self.light, i as u64, j as u64).write_to_buf(chunk);
         });
 
         image::save_buffer(

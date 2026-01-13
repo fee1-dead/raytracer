@@ -7,7 +7,7 @@ use crate::vec3::{Point, Vec3};
 
 use super::Scene;
 
-pub fn cornell_box() -> Scene {
+pub fn cornell_box() -> Scene<Quad> {
     let mut world = ObjectList::default();
 
     let red = Lambertian::new((0.65, 0.05, 0.05));
@@ -85,5 +85,5 @@ pub fn cornell_box() -> Scene {
         .defocus_angle(0.0)
         .build();
 
-    Scene { camera, world, light: Box::new(light) }
+    Scene { camera, world, light }
 }

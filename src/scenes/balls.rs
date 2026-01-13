@@ -9,7 +9,7 @@ use crate::object::{ObjectList};
 use crate::utils::{random_double, random_double_in};
 use crate::vec3::{Point, Vec3};
 
-pub fn balls(r: &mut SmallRng) -> Scene {
+pub fn balls(r: &mut SmallRng) -> Scene<DummyObject> {
     let mut world = ObjectList::default();
 
     let ground_material = Lambertian::new((0.5, 0.5, 0.5));
@@ -78,5 +78,5 @@ pub fn balls(r: &mut SmallRng) -> Scene {
         .background(Color::new(0.7, 0.8, 1.0))
         .build();
 
-    Scene { camera, world, light: Box::new(DummyObject) }
+    Scene { camera, world, light: DummyObject }
 }

@@ -9,7 +9,7 @@ use crate::pdf::{MixturePdf, ObjectPdf, Pdf};
 use crate::ray::Ray;
 use crate::utils::random_double;
 use crate::vec3::{Point, Vec3};
-#[cfg(not(test))]
+#[cfg(target_arch = "nvptx64")]
 use crate::Float;
 
 pub struct CameraBuilder {
@@ -235,6 +235,9 @@ impl Camera {
         world: &W,
         lights: &L,
     ) -> Color {
+        if depth == 0 {
+            return Color::splat(0.);
+        }
         if let Some(record) = world.hit(r, Interval::new(0.001, f64::INFINITY)) {
             let color_from_emission = record.material.emitted(&r, &record, record.point);
             color_from_emission.assert_finite();

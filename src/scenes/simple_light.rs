@@ -6,7 +6,7 @@ use crate::vec3::{Point, Vec3};
 
 use super::Scene;
 
-pub fn simple_light() -> Scene {
+pub fn simple_light() -> Scene<Quad> {
     let mut world = ObjectList::default();
 
     world.add(Sphere::new(
@@ -44,5 +44,5 @@ pub fn simple_light() -> Scene {
         .defocus_angle(0.0)
         .build();
 
-    Scene { camera, world, light: Box::new(light) }
+    Scene { camera, world, light }
 }

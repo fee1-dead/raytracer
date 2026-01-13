@@ -18,4 +18,5 @@ common = { path = "common" }
 
 [profile.release]
 codegen-units = 1
+panic = "abort"
 # lto = "fat"

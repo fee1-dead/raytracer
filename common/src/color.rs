@@ -1,7 +1,7 @@
 use crate::interval::Interval;
 use crate::vec3::{Vec3, Vec3Token};
 
-#[cfg(not(test))]
+#[cfg(target_arch = "nvptx64")]
 use crate::Float;
 
 pub struct ColorToken;
