@@ -1,6 +1,6 @@
 #![no_std]
 #![allow(internal_features)]
-#![feature(core_float_math, core_intrinsics)]
+#![feature(core_float_math, core_intrinsics, abi_gpu_kernel, stdarch_nvptx)]
 
 pub mod aabb;
 pub mod ffi;
@@ -44,24 +44,38 @@ impl Float for f64 {
     }
 }
 
-/*
+#[cfg(target_arch = "nvptx64")]
 #[unsafe(no_mangle)]
 pub unsafe extern "gpu-kernel" fn raytrace(
     // camera: &Camera
     camera: *const (),
-    // world: &&dyn Object
+    // world: &AnyObject
     world: *const (),
-    // lights: &&dyn Object
+    // lights: &AnyObject
     lights: *const (),
-    out: *mut u64
+    out: *mut u8
 ) {
-    let camera = unsafe { &*camera.cast::<Camera>() };
-    camera.render_single(world, lights, buf);
-    out.write(camera.buffer_len() as u64)
-}
-*/
+    use rand::SeedableRng;
+    use rand::rngs::SmallRng;
 
-#[cfg(not(test))]
+    use crate::object::AnyObject;
+    use crate::camera::Camera;
+
+    use core::arch::nvptx::*;
+
+    let i = unsafe { _block_dim_x() * _block_idx_x() + _thread_idx_x() };
+    let j = unsafe { _block_dim_y() * _block_idx_y() + _thread_idx_y() };
+
+
+    let camera = unsafe { &*camera.cast::<Camera>() };
+    let world = unsafe { &*world.cast::<AnyObject>() };
+    let lights = unsafe { &*lights.cast::<AnyObject>() };
+    let mut rng = SmallRng::seed_from_u64(42);
+    let c = camera.render_single(&mut rng, world, lights, i as u64, j as u64);
+    c.write_to_buf(unsafe { core::slice::from_raw_parts_mut(out, 3) });
+}
+
+#[cfg(target_arch = "nvptx64")]
 #[panic_handler]
 fn handle(_pi: &core::panic::PanicInfo) -> ! {
     core::intrinsics::abort()

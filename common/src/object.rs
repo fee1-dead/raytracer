@@ -3,6 +3,7 @@ use core::f64::consts::TAU;
 use rand::rngs::SmallRng;
 
 use crate::aabb::AxisAlignedBoundingBox;
+use crate::ffi::BvhNode;
 use crate::interval::Interval;
 use crate::material::AnyMaterial;
 use crate::onb::Onb;
@@ -77,6 +78,30 @@ pub enum AnyObject {
     Sphere(Sphere),
     Triangle(Triangle),
     Quad(Quad),
+    Bvh(BvhNode),
+}
+
+macro_rules! forward_object_fn {
+    (fn $name:ident(&self$(, $($n:ident: $T:ty),*  $(,)?)?) -> $ret:ty) => {
+        fn $name(&self$(, $($n: $T,)* )?) -> $ret {
+            match self {
+                AnyObject::Dummy => DummyObject.$name($($( $n, )*)?),
+                AnyObject::Translate(x) => x.$name($($( $n, )*)?),
+                AnyObject::RotateY(x) => x.$name($($( $n, )*)?),
+                AnyObject::Sphere(x) => x.$name($($( $n, )*)?),
+                AnyObject::Triangle(x) => x.$name($($( $n, )*)?),
+                AnyObject::Quad(x) => x.$name($($( $n, )*)?),
+                AnyObject::Bvh(x) => x.$name($($( $n, )*)?),
+            }
+        }
+    };
+}
+
+impl Object for AnyObject {
+    forward_object_fn!(fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord>);
+    forward_object_fn!(fn bounding_box(&self) -> AxisAlignedBoundingBox);
+    forward_object_fn!(fn random(&self, r: &mut SmallRng, origin: Point) -> Vec3);
+    forward_object_fn!(fn pdf_value(&self, origin: Point, direction: Vec3) -> f64);
 }
 
 pub struct DummyObject;

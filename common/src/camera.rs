@@ -157,11 +157,11 @@ impl Camera {
     pub fn buffer_len(&self) -> usize {
         (self.image_height * self.image_width * 3) as usize
     }
-    pub fn render_single(
+    pub fn render_single<W: Object, L: Object>(
         &self,
         rng: &mut SmallRng,
-        world: &dyn Object,
-        lights: &dyn Object,
+        world: &W,
+        lights: &L,
         i: u64,
         j: u64,
     ) -> Color {
@@ -176,7 +176,7 @@ impl Camera {
         self.pixel_samples_scale * pixel_color
     }
     /// render into a rgb8 buffer. `buf` must be height * width * 3 in size.
-    pub fn render(self, world: &dyn Object, lights: &dyn Object, buf: &mut [u8]) {
+    pub fn render<W: Object, L: Object>(self, world: &W, lights: &L, buf: &mut [u8]) {
         let Camera {
             image_width,
             ..
@@ -227,26 +227,43 @@ impl Camera {
         self.center + (p.0 * self.defocus_disk_u) + (p.1 * self.defocus_disk_v)
     }
     // todo condense params
-    pub fn ray_color(
+    pub fn ray_color<W: Object, L: Object>(
         &self,
         rng: &mut SmallRng,
         r: Ray,
         depth: u64,
-        world: &dyn Object,
-        lights: &dyn Object,
+        world: &W,
+        lights: &L,
+    ) -> Color 
+    
+    {
+        self.ray_color_inner(rng, r, depth, world, lights, Vec3::splat(1.0), Vec3::splat(0.0))
+    }
+    
+    fn ray_color_inner<W: Object, L: Object>(
+        &self,
+        rng: &mut SmallRng,
+        mut r: Ray,
+        mut depth: u64,
+        world: &W,
+        lights: &L,
+        mut multiplier: Color,
+        mut adder: Color,
     ) -> Color {
-        if depth == 0 {
-            return Color::new(0.0, 0.0, 0.0);
-        }
-        if let Some(record) = world.hit(r, Interval::new(0.001, f64::INFINITY)) {
+        while depth != 0 {
+            let Some(record) = world.hit(r, Interval::new(0.001, f64::INFINITY)) else { return self.background };
             let color_from_emission = record.material.emitted(&r, &record, record.point);
             color_from_emission.assert_finite();
             let Some(srec) = record.material.scatter(rng, &r, &record) else {
-                return color_from_emission;
+                return adder + multiplier*color_from_emission;
             };
 
             if let Some(ray) = srec.skip_pdf {
-                return srec.attenuation * self.ray_color(rng, ray, depth - 1, world, lights);
+                depth -= 1;
+                r = ray;
+                multiplier = multiplier * srec.attenuation;
+                adder = adder * srec.attenuation;
+                continue;
             }
 
             let light_pdf = ObjectPdf::new(lights, record.point);
@@ -259,20 +276,17 @@ impl Camera {
             let pdf_value = mixed.value(scattered.direction);
 
             if pdf_value == 0. {
-                return color_from_emission;
+                return adder + multiplier*color_from_emission;
             }
 
             let scattering_pdf = record.material.scattering_pdf(&r, &record, &scattered);
-            // let pdf_value = scattering_pdf;
 
-            let sample_color = self.ray_color(rng, scattered, depth - 1, world, lights);
-
-            let color_from_scatter = srec.attenuation * scattering_pdf * sample_color / pdf_value;
-            color_from_scatter.assert_finite();
-
-            color_from_emission + color_from_scatter
-        } else {
-            self.background
+            let mul = srec.attenuation * scattering_pdf / pdf_value;
+            depth -= 1;
+            r = scattered;
+            multiplier = multiplier * mul;
+            adder = adder * mul + color_from_emission;
         }
+        Color::new(0.0, 0.0, 0.0)
     }
 }
