@@ -234,36 +234,16 @@ impl Camera {
         depth: u64,
         world: &W,
         lights: &L,
-    ) -> Color 
-    
-    {
-        self.ray_color_inner(rng, r, depth, world, lights, Vec3::splat(1.0), Vec3::splat(0.0))
-    }
-    
-    fn ray_color_inner<W: Object, L: Object>(
-        &self,
-        rng: &mut SmallRng,
-        mut r: Ray,
-        mut depth: u64,
-        world: &W,
-        lights: &L,
-        mut multiplier: Color,
-        mut adder: Color,
     ) -> Color {
-        while depth != 0 {
-            let Some(record) = world.hit(r, Interval::new(0.001, f64::INFINITY)) else { return self.background };
+        if let Some(record) = world.hit(r, Interval::new(0.001, f64::INFINITY)) {
             let color_from_emission = record.material.emitted(&r, &record, record.point);
             color_from_emission.assert_finite();
             let Some(srec) = record.material.scatter(rng, &r, &record) else {
-                return adder + multiplier*color_from_emission;
+                return color_from_emission;
             };
 
             if let Some(ray) = srec.skip_pdf {
-                depth -= 1;
-                r = ray;
-                multiplier = multiplier * srec.attenuation;
-                adder = adder * srec.attenuation;
-                continue;
+                return srec.attenuation * self.ray_color(rng, ray, depth - 1, world, lights);
             }
 
             let light_pdf = ObjectPdf::new(lights, record.point);
@@ -276,17 +256,20 @@ impl Camera {
             let pdf_value = mixed.value(scattered.direction);
 
             if pdf_value == 0. {
-                return adder + multiplier*color_from_emission;
+                return color_from_emission;
             }
 
             let scattering_pdf = record.material.scattering_pdf(&r, &record, &scattered);
+            // let pdf_value = scattering_pdf;
 
-            let mul = srec.attenuation * scattering_pdf / pdf_value;
-            depth -= 1;
-            r = scattered;
-            multiplier = multiplier * mul;
-            adder = adder * mul + color_from_emission;
+            let sample_color = self.ray_color(rng, scattered, depth - 1, world, lights);
+
+            let color_from_scatter = srec.attenuation * scattering_pdf * sample_color / pdf_value;
+            color_from_scatter.assert_finite();
+
+            color_from_emission + color_from_scatter
+        } else {
+            self.background
         }
-        Color::new(0.0, 0.0, 0.0)
     }
 }
