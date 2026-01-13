@@ -22,5 +22,6 @@ codegen-units = 1
 panic = "abort"
 
 [features]
+default = ["gpu"]
 gpu = ["dep:cust"]
 # lto = "fat"

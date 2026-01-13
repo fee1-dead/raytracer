@@ -25,6 +25,7 @@ impl Vec3Token for GeometryToken {
     type Data = f64;
 }
 
+#[repr(C)]
 pub struct Vec3<Token: Vec3Token = GeometryToken>(
     pub Token::Data,
     pub Token::Data,

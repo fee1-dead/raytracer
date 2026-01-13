@@ -67,8 +67,11 @@ impl ObjectList {
     }
 
     pub fn finalize(self) -> ffi::ObjectList {
-        // TODO gpu
-        ffi::ObjectList { objects: Box::leak(self.objects.into_boxed_slice()), aabb: self.aabb }
+        ffi::ObjectList { objects: crate::finalize_vec(self.objects), aabb: self.aabb }
+    }
+
+    pub fn finalize_as_bvh(mut self) -> ffi::BvhNode {
+        BvhNode::make_ffi_bvh_from_objects(&mut self.objects)
     }
 }
 

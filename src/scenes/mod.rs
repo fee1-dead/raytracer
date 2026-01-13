@@ -24,9 +24,9 @@ use crate::camera::Camera;
 use crate::object::{Object, ObjectList};
 
 pub struct Scene<L: Object> {
-    camera: Camera,
-    world: ObjectList,
-    light: L,
+    pub camera: Camera,
+    pub world: ObjectList,
+    pub light: L,
 }
 
 impl<L: Object> Scene<L> {

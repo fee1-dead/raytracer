@@ -71,6 +71,7 @@ impl<T: Object + ?Sized> Object for &T {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum AnyObject {
     Dummy(DummyObject),
     Translate(Translate<&'static AnyObject>),
@@ -127,6 +128,7 @@ impl Object for AnyObject {
     forward_object_fn!(fn pdf_value(&self, origin: Point, direction: Vec3) -> f64);
 }
 
+#[derive(Clone, Copy)]
 pub struct DummyObject;
 
 impl Object for DummyObject {
@@ -138,6 +140,7 @@ impl Object for DummyObject {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Translate<T> {
     object: T,
     offset: Vec3,
@@ -172,6 +175,8 @@ impl<T: Object> Object for Translate<T> {
         self.bbox
     }
 }
+
+#[derive(Clone, Copy)]
 
 pub struct RotateY<T> {
     object: T,

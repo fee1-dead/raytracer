@@ -6,6 +6,7 @@ use crate::object::{AnyObject, HitRecord, Object};
 use crate::ray::Ray;
 use crate::vec3::{Point, Vec3};
 
+#[derive(Clone, Copy)]
 pub struct ObjectList {
     pub objects: &'static [AnyObject],
     pub aabb: AxisAlignedBoundingBox,
@@ -38,6 +39,7 @@ impl Object for ObjectList {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct BvhNode {
     pub left: &'static AnyObject,
     pub right: &'static AnyObject,

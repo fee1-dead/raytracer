@@ -131,6 +131,7 @@ impl CameraBuilder {
 }
 
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct Camera {
     pub image_width: u64,
     pub image_height: u64,

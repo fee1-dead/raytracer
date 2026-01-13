@@ -67,13 +67,18 @@ pub unsafe extern "gpu-kernel" fn raytrace(
     let i = unsafe { _block_dim_x() * _block_idx_x() + _thread_idx_x() };
     let j = unsafe { _block_dim_y() * _block_idx_y() + _thread_idx_y() };
 
-
     let camera = unsafe { &*camera.cast::<Camera>() };
     let world = unsafe { &*world.cast::<AnyObject>() };
     let lights = unsafe { &*lights.cast::<AnyObject>() };
+
+    if i as u64 >= camera.image_width || j as u64 >= camera.image_height {
+        return;
+    }
+    
     let mut rng = SmallRng::seed_from_u64(42);
     let c = camera.render_single(&mut rng, world, lights, i as u64, j as u64);
-    c.write_to_buf(unsafe { core::slice::from_raw_parts_mut(out, 3) });
+    let offset = i * 3 + j * 3 * 5000;
+    c.write_to_buf(unsafe { core::slice::from_raw_parts_mut(out.offset(offset as isize), 3) });
 }
 
 #[cfg(target_arch = "nvptx64")]
