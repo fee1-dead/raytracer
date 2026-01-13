@@ -60,7 +60,9 @@ pub fn cornell_box_testing() -> Scene<Quad> {
         Point::new(165.0, 330.0, 165.0),
         white,
     );
+    let box1 = crate::finalize(AnyObject::from(box1.finalize()));
     let box1 = RotateY::new(box1, 15.0);
+    let box1 = crate::finalize(AnyObject::from(box1));
     let box1 = Translate::new(box1, Vec3(265.0, 0.0, 295.0));
     world.add(box1);
 

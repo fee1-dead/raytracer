@@ -15,8 +15,12 @@ image = { version = "0.25.2", default-features = false, features = ["png", "rayo
 rand.workspace = true
 rayon = "1.10.0"
 common = { path = "common" }
+cust = { version = "0.3.2", optional = true }
 
 [profile.release]
 codegen-units = 1
 panic = "abort"
+
+[features]
+gpu = ["dep:cust"]
 # lto = "fat"

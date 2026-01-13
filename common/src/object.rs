@@ -3,7 +3,7 @@ use core::f64::consts::TAU;
 use rand::rngs::SmallRng;
 
 use crate::aabb::AxisAlignedBoundingBox;
-use crate::ffi::BvhNode;
+use crate::ffi::{BvhNode, ObjectList};
 use crate::interval::Interval;
 use crate::material::AnyMaterial;
 use crate::onb::Onb;
@@ -72,29 +72,52 @@ impl<T: Object + ?Sized> Object for &T {
 }
 
 pub enum AnyObject {
-    Dummy,
+    Dummy(DummyObject),
     Translate(Translate<&'static AnyObject>),
     RotateY(RotateY<&'static AnyObject>),
     Sphere(Sphere),
     Triangle(Triangle),
     Quad(Quad),
     Bvh(BvhNode),
+    List(ObjectList),
 }
 
 macro_rules! forward_object_fn {
     (fn $name:ident(&self$(, $($n:ident: $T:ty),*  $(,)?)?) -> $ret:ty) => {
         fn $name(&self$(, $($n: $T,)* )?) -> $ret {
             match self {
-                AnyObject::Dummy => DummyObject.$name($($( $n, )*)?),
+                AnyObject::Dummy(x) => x.$name($($( $n, )*)?),
                 AnyObject::Translate(x) => x.$name($($( $n, )*)?),
                 AnyObject::RotateY(x) => x.$name($($( $n, )*)?),
                 AnyObject::Sphere(x) => x.$name($($( $n, )*)?),
                 AnyObject::Triangle(x) => x.$name($($( $n, )*)?),
                 AnyObject::Quad(x) => x.$name($($( $n, )*)?),
                 AnyObject::Bvh(x) => x.$name($($( $n, )*)?),
+                AnyObject::List(x) => x.$name($($( $n, )*)?),
             }
         }
     };
+}
+
+macro_rules! impl_from {
+    ($($Variant:ident($Ty:ty)),*$(,)?) => {$(
+        impl From<$Ty> for AnyObject {
+            fn from(x: $Ty) -> Self {
+                Self::$Variant(x)
+            }
+        })*
+    };
+}
+
+impl_from! {
+    Dummy(DummyObject),
+    Translate(Translate<&'static AnyObject>),
+    RotateY(RotateY<&'static AnyObject>),
+    Sphere(Sphere),
+    Triangle(Triangle),
+    Quad(Quad),
+    Bvh(BvhNode),
+    List(ObjectList),
 }
 
 impl Object for AnyObject {

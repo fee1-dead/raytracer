@@ -1,12 +1,46 @@
+use rand::rngs::SmallRng;
+
 use crate::aabb::AxisAlignedBoundingBox;
 use crate::interval::Interval;
-use crate::object::{HitRecord, Object};
+use crate::object::{AnyObject, HitRecord, Object};
 use crate::ray::Ray;
+use crate::vec3::{Point, Vec3};
+
+pub struct ObjectList {
+    pub objects: &'static [AnyObject],
+    pub aabb: AxisAlignedBoundingBox,
+}
+
+impl Object for ObjectList {
+    fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
+        let mut closest = ray_t.max;
+        let mut hit_record = None;
+        for obj in self.objects {
+            if let Some(record) = obj.hit(r, Interval::new(ray_t.min, closest)) {
+                closest = record.t;
+                hit_record = Some(record);
+            }
+        }
+        hit_record
+    }
+    fn bounding_box(&self) -> AxisAlignedBoundingBox {
+        self.aabb
+    }
+    // TODO this is bad
+    fn pdf_value(&self, origin: Point, direction: Vec3) -> f64 {
+        let weight = (self.objects.len() as f64).recip();
+        self.objects.iter().map(|o| weight * o.pdf_value(origin, direction)).sum()
+    }
+    fn random(&self, r: &mut SmallRng, origin: Point) -> Vec3 {
+        use rand::prelude::IndexedRandom;
+        self.objects.choose(r).unwrap().random(r, origin)
+    }
+}
 
 #[repr(C)]
 pub struct BvhNode {
-    pub left: &'static BvhNode,
-    pub right: &'static BvhNode,
+    pub left: &'static AnyObject,
+    pub right: &'static AnyObject,
     pub bbox: AxisAlignedBoundingBox,
 }
 
@@ -27,4 +61,3 @@ impl Object for BvhNode {
         self.bbox
     }
 }
-

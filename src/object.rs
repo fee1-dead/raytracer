@@ -1,6 +1,7 @@
 use std::mem::take;
 
 use common::aabb::AxisAlignedBoundingBox;
+use common::ffi;
 use common::interval::Interval;
 use common::material::AnyMaterial;
 use common::ray::Ray;
@@ -38,17 +39,18 @@ pub fn box_3d(a: Point, b: Point, mat: impl Into<AnyMaterial>) -> ObjectList {
 
 #[derive(Default)]
 pub struct ObjectList {
-    objects: Vec<Box<dyn Object>>,
+    objects: Vec<AnyObject>,
     aabb: AxisAlignedBoundingBox,
 }
 
 impl ObjectList {
-    pub fn add(&mut self, o: impl Object + 'static) {
-        self.aabb = self.aabb.merge(o.bounding_box());
-        self.objects.push(Box::new(o))
+    pub fn add(&mut self, o: impl Into<AnyObject>) {
+        let obj = o.into();
+        self.aabb = self.aabb.merge(obj.bounding_box());
+        self.objects.push(obj)
     }
 
-    pub fn add_all(&mut self, o: impl IntoIterator<Item = impl Object + 'static>) {
+    pub fn add_all(&mut self, o: impl IntoIterator<Item = impl Into<AnyObject>>) {
         o.into_iter().for_each(|v| self.add(v));
     }
 
@@ -56,9 +58,17 @@ impl ObjectList {
         self.objects.len()
     }
 
-    pub fn condense(&mut self) {
+    pub fn condense(&mut self) -> BvhNode {
         let objects = take(&mut self.objects);
-        self.objects.push(Box::new(BvhNode::from(objects)))
+        BvhNode::from(objects.into_iter().map(|o| {
+            let x: Box<dyn Object> = Box::new(o);
+            x
+        }).collect::<Vec<_>>())
+    }
+
+    pub fn finalize(self) -> ffi::ObjectList {
+        // TODO gpu
+        ffi::ObjectList { objects: Box::leak(self.objects.into_boxed_slice()), aabb: self.aabb }
     }
 }
 

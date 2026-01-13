@@ -3,8 +3,9 @@ use std::sync::Arc;
 
 
 use common::aabb::AxisAlignedBoundingBox;
+use common::ffi;
 use common::interval::Interval;
-use common::object::{HitRecord, Object};
+use common::object::{AnyObject, HitRecord, Object};
 use common::ray::Ray;
 
 #[derive(Clone)]
@@ -60,6 +61,53 @@ impl BvhNode {
         };
 
         BvhNode { left, right, bbox }
+    }
+
+    pub fn make_ffi_bvh_from_objects(objects: &mut Vec<AnyObject>) -> ffi::BvhNode {
+        let mut bbox = AxisAlignedBoundingBox::EMPTY;
+        for obj in objects.iter_mut() {
+            bbox = bbox.merge(obj.bounding_box());
+        }
+        let [left, right] = match objects.len() {
+            0 => panic!("object list for BVH must be non-empty"),
+            1 => {
+                let o = objects.pop().unwrap();
+                let o = crate::finalize(o);
+                [o, o]
+            }
+            2 => {
+                let o2 = objects.pop().unwrap();
+                let o1 = objects.pop().unwrap();
+                [crate::finalize(o1), crate::finalize(o2)]
+            }
+            _ => {
+                let axis = bbox.longest_axis();
+                fn cmp_with_axis(
+                    f: impl Fn(AxisAlignedBoundingBox) -> f64,
+                ) -> impl Fn(&AnyObject, &AnyObject) -> Ordering {
+                    move |a, b| {
+                        let a = f(a.bounding_box());
+                        let b = f(b.bounding_box());
+                        a.total_cmp(&b)
+                    }
+                }
+                objects.sort_by(cmp_with_axis(if axis == 0 {
+                    |o: AxisAlignedBoundingBox| o.x.min
+                } else if axis == 1 {
+                    |o: AxisAlignedBoundingBox| o.y.min
+                } else {
+                    |o: AxisAlignedBoundingBox| o.z.min
+                }));
+                let mid = objects.len() / 2;
+                let mut right = objects.split_off(mid);
+                let mut left = objects;
+                let a1 = crate::finalize(BvhNode::make_ffi_bvh_from_objects(&mut left).into());
+                let a2 = crate::finalize(BvhNode::make_ffi_bvh_from_objects(&mut right).into());
+                [a1, a2]
+            }
+        };
+
+        ffi::BvhNode { left, right, bbox }
     }
 }
 

@@ -49,18 +49,18 @@ pub fn cornell_box() -> Scene<Quad> {
         Point::new(0.0, 0.0, 0.0),
         Point::new(165.0, 330.0, 165.0),
         white,
-    );
-    let box1 = RotateY::new(box1, 15.0);
-    let box1 = Translate::new(box1, Vec3(265.0, 0.0, 295.0));
+    ).finalize();
+    let box1 = RotateY::new(crate::finalize(box1.into()), 15.0);
+    let box1 = Translate::new(crate::finalize(box1.into()), Vec3(265.0, 0.0, 295.0));
     world.add(box1);
 
     let box2 = box_3d(
         Point::new(0.0, 0.0, 0.0),
         Point::new(165.0, 165.0, 165.0),
         white,
-    );
-    let box2 = RotateY::new(box2, -18.0);
-    let box2 = Translate::new(box2, Vec3(130.0, 0.0, 65.0));
+    ).finalize();
+    let box2 = RotateY::new(crate::finalize(box2.into()), -18.0);
+    let box2 = Translate::new(crate::finalize(box2.into()), Vec3(130.0, 0.0, 65.0));
     world.add(box2);
 
     let light = Quad::new(

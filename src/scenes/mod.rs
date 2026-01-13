@@ -30,7 +30,10 @@ pub struct Scene<L: Object> {
 }
 
 impl<L: Object> Scene<L> {
-    pub fn render_with_metrics(self) -> color_eyre::Result<()> {
+    pub fn render_with_metrics(mut self) -> color_eyre::Result<()> {
+        if self.world.len() > 10 {
+            self.world.condense();
+        }
         let time = Instant::now();
         let pixels = self.camera.num_pixels();
         self.render()?;
