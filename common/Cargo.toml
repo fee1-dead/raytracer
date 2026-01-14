@@ -6,6 +6,11 @@ edition = "2024"
 [dependencies]
 libm = "0.2.15"
 rand.workspace = true
+cuda_std = { version = "0.2.2", optional = true }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["gpu"]
+gpu = ["dep:cuda_std"]
