@@ -1,4 +1,4 @@
-use core::f64::consts::TAU;
+use core::f32::consts::TAU;
 
 use rand::rngs::SmallRng;
 
@@ -18,7 +18,7 @@ use crate::Float;
 pub struct HitRecord {
     pub point: Point,
     pub normal: Vec3,
-    pub t: f64,
+    pub t: f32,
     pub front_face: bool,
     pub material: AnyMaterial,
 }
@@ -26,7 +26,7 @@ pub struct HitRecord {
 impl HitRecord {
     pub fn new(
         r: Ray,
-        t: f64,
+        t: f32,
         outward_normal: impl FnOnce(Point) -> Vec3,
         material: impl Into<AnyMaterial>,
     ) -> Self {
@@ -52,7 +52,7 @@ pub trait Object: Send + Sync {
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord>;
     fn bounding_box(&self) -> AxisAlignedBoundingBox;
     // todo implement more of these
-    fn pdf_value(&self, _origin: Point, _direction: Vec3) -> f64 { 0.0 }
+    fn pdf_value(&self, _origin: Point, _direction: Vec3) -> f32 { 0.0 }
     fn random(&self, _r: &mut SmallRng, _origin: Point) -> Vec3 { Vec3(1.0, 0.0, 0.0) }
 }
 
@@ -63,7 +63,7 @@ impl<T: Object + ?Sized> Object for &T {
     fn bounding_box(&self) -> AxisAlignedBoundingBox {
         T::bounding_box(*self)
     }
-    fn pdf_value(&self, origin: Point, direction: Vec3) -> f64 {
+    fn pdf_value(&self, origin: Point, direction: Vec3) -> f32 {
         T::pdf_value(*self, origin, direction)
     }
     fn random(&self, r: &mut SmallRng, origin: Point) -> Vec3 {
@@ -125,7 +125,7 @@ impl Object for AnyObject {
     forward_object_fn!(fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord>);
     forward_object_fn!(fn bounding_box(&self) -> AxisAlignedBoundingBox);
     forward_object_fn!(fn random(&self, r: &mut SmallRng, origin: Point) -> Vec3);
-    forward_object_fn!(fn pdf_value(&self, origin: Point, direction: Vec3) -> f64);
+    forward_object_fn!(fn pdf_value(&self, origin: Point, direction: Vec3) -> f32);
 }
 
 #[derive(Clone, Copy)]
@@ -180,24 +180,24 @@ impl<T: Object> Object for Translate<T> {
 
 pub struct RotateY<T> {
     object: T,
-    sin_theta: f64,
-    cos_theta: f64,
+    sin_theta: f32,
+    cos_theta: f32,
     bbox: AxisAlignedBoundingBox,
 }
 
 impl<T: Object> RotateY<T> {
-    pub fn new(object: T, angle: f64) -> Self {
+    pub fn new(object: T, angle: f32) -> Self {
         let rad = angle.to_radians();
         let (sin_theta, cos_theta) = rad.sin_cos();
         let bbox = object.bounding_box();
 
-        let mut min = Point::splat(f64::INFINITY);
-        let mut max = Point::splat(f64::NEG_INFINITY);
+        let mut min = Point::splat(f32::INFINITY);
+        let mut max = Point::splat(f32::NEG_INFINITY);
 
         for i in 0..2 {
             for j in 0..2 {
                 for k in 0..2 {
-                    let [i, j, k] = [i, j, k].map(|i| i as f64);
+                    let [i, j, k] = [i, j, k].map(|i| i as f32);
                     let x = i * bbox.x.max + (1.0 - i) * bbox.x.min;
                     let y = j * bbox.y.max + (1.0 - j) * bbox.y.min;
                     let z = k * bbox.z.max + (1.0 - k) * bbox.z.min;
@@ -257,13 +257,13 @@ impl<T: Object> Object for RotateY<T> {
 #[derive(Clone, Copy)]
 pub struct Sphere {
     center: Point,
-    radius: f64,
+    radius: f32,
     material: AnyMaterial,
     aabb: AxisAlignedBoundingBox,
 }
 
 impl Sphere {
-    pub fn new(center: Point, radius: f64, material: impl Into<AnyMaterial>) -> Sphere {
+    pub fn new(center: Point, radius: f32, material: impl Into<AnyMaterial>) -> Sphere {
         let rvec = Vec3::splat(radius);
         let aabb = AxisAlignedBoundingBox::from_points(center - rvec, center + rvec);
         Sphere {
@@ -273,7 +273,7 @@ impl Sphere {
             aabb,
         }
     }
-    fn random_to_sphere(r: &mut SmallRng, radius: f64, distance_squared: f64) -> Vec3 {
+    fn random_to_sphere(r: &mut SmallRng, radius: f32, distance_squared: f32) -> Vec3 {
         let r1 = random_double(r);
         let r2 = random_double(r);
         let z = 1. + r2*((1.-radius*radius/distance_squared).sqrt() - 1.);
@@ -324,8 +324,8 @@ impl Object for Sphere {
         self.aabb
     }
     /// TODO: only works for stationary spheres
-    fn pdf_value(&self, origin: Point, direction: Vec3) -> f64 {
-        let Some(_) = self.hit(Ray { origin, direction }, Interval::new(0.001, f64::INFINITY)) else {
+    fn pdf_value(&self, origin: Point, direction: Vec3) -> f32 {
+        let Some(_) = self.hit(Ray { origin, direction }, Interval::new(0.001, f32::INFINITY)) else {
             return 0.;
         };
 
@@ -415,8 +415,8 @@ pub struct Quad {
     mat: AnyMaterial,
     bbox: AxisAlignedBoundingBox,
     normal: Vec3,
-    d: f64,
-    area: f64,
+    d: f32,
+    area: f32,
 }
 
 impl Quad {
@@ -440,7 +440,7 @@ impl Quad {
         }
     }
 
-    pub fn hit_as_interior(&self, a: f64, b: f64, rec: HitRecord) -> Option<HitRecord> {
+    pub fn hit_as_interior(&self, a: f32, b: f32, rec: HitRecord) -> Option<HitRecord> {
         let unit_interval = Interval::new(0.0, 1.0);
 
         if !unit_interval.contains(a) || !unit_interval.contains(b) {
@@ -474,8 +474,8 @@ impl Object for Quad {
     fn bounding_box(&self) -> AxisAlignedBoundingBox {
         self.bbox
     }
-    fn pdf_value(&self, origin: Point, direction: Vec3) -> f64 {
-        let Some(rec) = self.hit(Ray { origin, direction }, Interval::new(0.001, f64::INFINITY))
+    fn pdf_value(&self, origin: Point, direction: Vec3) -> f32 {
+        let Some(rec) = self.hit(Ray { origin, direction }, Interval::new(0.001, f32::INFINITY))
         else {
             return 0.;
         };

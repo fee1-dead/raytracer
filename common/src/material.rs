@@ -1,4 +1,4 @@
-use core::f64::consts::FRAC_1_PI;
+use core::f32::consts::FRAC_1_PI;
 
 use rand::rngs::SmallRng;
 
@@ -27,7 +27,7 @@ pub trait Material {
     }
     fn scatter(&self, r: &mut SmallRng, r_in: &Ray, rec: &HitRecord) -> Option<ScatterRecord>;
     #[expect(unused_variables)]
-    fn scattering_pdf(&self, r_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f64 {
+    fn scattering_pdf(&self, r_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f32 {
         0.0
     }
 }
@@ -50,7 +50,7 @@ macro_rules! generate_any_material {
                     $(Self::$x(v) => v.scatter(r, r_in, rec),)*
                 }
             }
-            fn scattering_pdf(&self, r_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f64 {
+            fn scattering_pdf(&self, r_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f32 {
                 match self {
                     $(Self::$x(v) => v.scattering_pdf(r_in, rec, scattered),)*
                 }
@@ -97,7 +97,7 @@ impl Material for Lambertian {
             skip_pdf: None,
         })
     }
-    fn scattering_pdf(&self, _r_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f64 {
+    fn scattering_pdf(&self, _r_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f32 {
         let cos_theta = rec.normal.dot(scattered.direction.unit_vector());
         cos_theta.max(0.0) * FRAC_1_PI
     }
@@ -106,11 +106,11 @@ impl Material for Lambertian {
 #[derive(Clone, Copy)]
 pub struct Metal {
     albedo: Color,
-    fuzziness: f64,
+    fuzziness: f32,
 }
 
 impl Metal {
-    pub fn new(albedo: impl Into<Color>, fuzziness: f64) -> Self {
+    pub fn new(albedo: impl Into<Color>, fuzziness: f32) -> Self {
         Metal {
             albedo: albedo.into(),
             fuzziness: fuzziness.min(1.0),
@@ -142,15 +142,15 @@ impl Material for Metal {
 
 #[derive(Clone, Copy)]
 pub struct Dielectric {
-    refraction_index: f64,
+    refraction_index: f32,
 }
 
 impl Dielectric {
-    pub fn new(refraction_index: f64) -> Self {
+    pub fn new(refraction_index: f32) -> Self {
         Self { refraction_index }
     }
 
-    fn reflectance(refraction_index: f64, cosine: f64) -> f64 {
+    fn reflectance(refraction_index: f32, cosine: f32) -> f32 {
         let r0 = (1.0 - refraction_index) / (1.0 + refraction_index);
         let r0 = r0 * r0;
         r0 + (1.0 - r0) * (1.0 - cosine).powi(5)

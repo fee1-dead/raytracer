@@ -1,5 +1,5 @@
 use core::array;
-use core::f64::consts::PI;
+use core::f32::consts::PI;
 use core::iter::Sum;
 use core::ops::{Add, AddAssign, Div, Index, IndexMut, Mul, Neg, Sub, SubAssign};
 
@@ -22,7 +22,7 @@ pub trait Vec3Token {
 
 pub struct GeometryToken;
 impl Vec3Token for GeometryToken {
-    type Data = f64;
+    type Data = f32;
 }
 
 #[repr(C)]
@@ -57,8 +57,8 @@ impl<Token: Vec3Token> Vec3<Token> {
     }
 }
 
-impl<Token: Vec3Token<Data = f64>> Vec3<Token> {
-    pub fn length(self) -> f64 {
+impl<Token: Vec3Token<Data = f32>> Vec3<Token> {
+    pub fn length(self) -> f32 {
         Float::sqrt(self.length_squared())
     }
 
@@ -70,7 +70,7 @@ impl<Token: Vec3Token<Data = f64>> Vec3<Token> {
         Self(random_double(r), random_double(r), random_double(r))
     }
 
-    pub fn random_in(r: &mut SmallRng, min: f64, max: f64) -> Self {
+    pub fn random_in(r: &mut SmallRng, min: f32, max: f32) -> Self {
         Self(
             random_double_in(r, min, max),
             random_double_in(r, min, max),
@@ -130,7 +130,7 @@ impl<Token: Vec3Token<Data = f64>> Vec3<Token> {
         self - 2.0 * self.dot(normal) * normal
     }
 
-    pub fn refract(self, normal: Self, etai_over_etat: f64) -> Self {
+    pub fn refract(self, normal: Self, etai_over_etat: f32) -> Self {
         let cos_theta = (-self).dot(normal).min(1.0);
         let r_out_perp = etai_over_etat * (self + cos_theta * normal);
         let r_out_parallel = -(1.0 - r_out_perp.length_squared()).abs().sqrt() * normal;
@@ -189,14 +189,14 @@ impl_binop_assign!(-=, SubAssign, sub_assign);
 
 macro_rules! impl_scalar_op {
     ($token:tt, $Trait:ident, $fn_name:ident) => {
-        impl<T: Vec3Token<Data = f64>> $Trait<f64> for Vec3<T> {
+        impl<T: Vec3Token<Data = f32>> $Trait<f32> for Vec3<T> {
             type Output = Self;
-            fn $fn_name(self, other: f64) -> Self {
+            fn $fn_name(self, other: f32) -> Self {
                 Self(self.0 $token other, self.1 $token other, self.2 $token other)
             }
         }
 
-        impl<T: Vec3Token<Data = f64>> $Trait<Vec3<T>> for f64 {
+        impl<T: Vec3Token<Data = f32>> $Trait<Vec3<T>> for f32 {
             type Output = Vec3<T>;
             fn $fn_name(self, other: Vec3<T>) -> Vec3<T> {
                 Vec3(self $token other.0, self $token other.1, self $token other.2)

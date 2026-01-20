@@ -23,9 +23,9 @@ pub fn balls(r: &mut SmallRng) -> Scene<DummyObject> {
         for b in -11..11 {
             let choose_mat = random_double(r);
             let center = Point::new(
-                a as f64 + 0.9 * random_double(r),
+                a as f32 + 0.9 * random_double(r),
                 0.2,
-                b as f64 + 0.9 * random_double(r),
+                b as f32 + 0.9 * random_double(r),
             );
 
             if (center - Point::new(4.0, 0.2, 0.0)).length() > 0.9 {

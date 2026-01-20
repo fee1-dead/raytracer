@@ -28,8 +28,8 @@ impl Object for ObjectList {
         self.aabb
     }
     // TODO this is bad
-    fn pdf_value(&self, origin: Point, direction: Vec3) -> f64 {
-        let weight = (self.objects.len() as f64).recip();
+    fn pdf_value(&self, origin: Point, direction: Vec3) -> f32 {
+        let weight = (self.objects.len() as f32).recip();
         self.objects.iter().map(|o| weight * o.pdf_value(origin, direction)).sum()
     }
     fn random(&self, r: &mut SmallRng, origin: Point) -> Vec3 {

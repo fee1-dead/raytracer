@@ -36,7 +36,7 @@ impl BvhNode {
             _ => {
                 let axis = bbox.longest_axis();
                 fn cmp_with_axis(
-                    f: impl Fn(AxisAlignedBoundingBox) -> f64,
+                    f: impl Fn(AxisAlignedBoundingBox) -> f32,
                 ) -> impl Fn(&Box<dyn Object>, &Box<dyn Object>) -> Ordering {
                     move |a, b| {
                         let a = f(a.bounding_box());
@@ -83,7 +83,7 @@ impl BvhNode {
             _ => {
                 let axis = bbox.longest_axis();
                 fn cmp_with_axis(
-                    f: impl Fn(AxisAlignedBoundingBox) -> f64,
+                    f: impl Fn(AxisAlignedBoundingBox) -> f32,
                 ) -> impl Fn(&AnyObject, &AnyObject) -> Ordering {
                     move |a, b| {
                         let a = f(a.bounding_box());
@@ -100,7 +100,7 @@ impl BvhNode {
                 }));
                 let mid = objects.len() / 2;
                 let mut right = objects.split_off(mid);
-                let mut left = objects;
+                let left = objects;
                 let a1 = crate::finalize(BvhNode::make_ffi_bvh_from_objects(left).into());
                 let a2 = crate::finalize(BvhNode::make_ffi_bvh_from_objects(&mut right).into());
                 [a1, a2]

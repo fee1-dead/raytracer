@@ -13,17 +13,17 @@ use crate::vec3::{Point, Vec3};
 use crate::Float;
 
 pub struct CameraBuilder {
-    aspect_ratio: f64,
+    aspect_ratio: f32,
     image_width: u64,
     samples_per_pixel: u64,
     max_depth: u64,
     /// Vertical view angle
-    vfov: f64,
+    vfov: f32,
     look_from: Point,
     look_at: Point,
     vup: Vec3,
-    defocus_angle: f64,
-    focus_dist: f64,
+    defocus_angle: f32,
+    focus_dist: f32,
     background: Color,
 }
 
@@ -55,16 +55,16 @@ impl CameraBuilder {
         }
     }
     builder_methods!(
-        aspect_ratio: f64,
+        aspect_ratio: f32,
         image_width: u64,
         samples_per_pixel: u64,
         max_depth: u64,
-        vfov: f64,
+        vfov: f32,
         look_from: Point,
         look_at: Point,
         vup: Vec3,
-        defocus_angle: f64,
-        focus_dist: f64,
+        defocus_angle: f32,
+        focus_dist: f32,
         background: Color,
     );
     pub fn build(&self) -> Camera {
@@ -81,13 +81,13 @@ impl CameraBuilder {
             focus_dist,
             background,
         } = *self;
-        let image_height = (image_width as f64 / aspect_ratio) as u64;
+        let image_height = (image_width as f32 / aspect_ratio) as u64;
         let image_height = image_height.max(1);
 
         let theta = vfov.to_radians();
         let h = (theta / 2.0).tan();
         let viewport_height = 2.0 * h * focus_dist;
-        let viewport_width = viewport_height * (image_width as f64 / image_height as f64);
+        let viewport_width = viewport_height * (image_width as f32 / image_height as f32);
         let center = look_from;
 
         // Calculate the u,v,w unit basis vectors for the camera coordinate frame.
@@ -100,17 +100,17 @@ impl CameraBuilder {
         let viewport_v = viewport_height * -v;
 
         // horizontal and vertical delta vectors per pixel
-        let pixel_delta_u = viewport_u / image_width as f64;
-        let pixel_delta_v = viewport_v / image_height as f64;
+        let pixel_delta_u = viewport_u / image_width as f32;
+        let pixel_delta_v = viewport_v / image_height as f32;
 
         // location of the upper left pixel
         let viewport_upper_left = center - (focus_dist * w) - viewport_u / 2.0 - viewport_v / 2.0;
         let pixel00_loc = viewport_upper_left + (pixel_delta_u + pixel_delta_v) * 0.5;
 
         let defocus_radius = focus_dist * (defocus_angle / 2.0).to_radians().tan();
-        let sqrt_spp = (samples_per_pixel as f64).sqrt() as u64;
-        let pixel_samples_scale = 1.0 / (sqrt_spp as f64 * sqrt_spp as f64);
-        let recip_sqrt_spp = (sqrt_spp as f64).recip();
+        let sqrt_spp = (samples_per_pixel as f32).sqrt() as u64;
+        let pixel_samples_scale = 1.0 / (sqrt_spp as f32 * sqrt_spp as f32);
+        let recip_sqrt_spp = (sqrt_spp as f32).recip();
         Camera {
             image_width,
             image_height,
@@ -139,14 +139,14 @@ pub struct Camera {
     pixel00_loc: Point,
     pixel_delta_u: Vec3,
     pixel_delta_v: Vec3,
-    defocus_angle: f64,
+    defocus_angle: f32,
     defocus_disk_u: Vec3,
     defocus_disk_v: Vec3,
-    pixel_samples_scale: f64,
+    pixel_samples_scale: f32,
     /// Square root of # of samples per pixel
     sqrt_spp: u64,
     /// 1 / sqrt_spp
-    recip_sqrt_spp: f64,
+    recip_sqrt_spp: f32,
     max_depth: u64,
     center: Point,
 }
@@ -202,8 +202,8 @@ impl Camera {
         let (offset_x, offset_y) = self.sample_square_stratified(r, s_i, s_j);
 
         let pixel_sample = self.pixel00_loc
-            + ((i as f64 + offset_x) * self.pixel_delta_u)
-            + ((j as f64 + offset_y) * self.pixel_delta_v);
+            + ((i as f32 + offset_x) * self.pixel_delta_u)
+            + ((j as f32 + offset_y) * self.pixel_delta_v);
         let origin = if self.defocus_angle <= 0.0 {
             self.center
         } else {
@@ -213,14 +213,14 @@ impl Camera {
         Ray { origin, direction }
     }
     /// vector to a random point in the square from (-0.5, -0.5) to (0.5, 0.5)
-    pub fn sample_square(r: &mut SmallRng) -> (f64, f64) {
+    pub fn sample_square(r: &mut SmallRng) -> (f32, f32) {
         (random_double(r) - 0.5, random_double(r) - 0.5)
     }
     /// Returns the vector to a random point in the square sub-pixel specified by grid
     /// indices s_i and s_j for an idealized unit square pixel [-.5,-.5] to [+.5,+.5].
-    pub fn sample_square_stratified(&self, r: &mut SmallRng, s_i: u64, s_j: u64) -> (f64, f64) {
-        let px = ((s_i as f64 + random_double(r)) * self.recip_sqrt_spp) - 0.5;
-        let py = ((s_j as f64 + random_double(r)) * self.recip_sqrt_spp) - 0.5;
+    pub fn sample_square_stratified(&self, r: &mut SmallRng, s_i: u64, s_j: u64) -> (f32, f32) {
+        let px = ((s_i as f32 + random_double(r)) * self.recip_sqrt_spp) - 0.5;
+        let py = ((s_j as f32 + random_double(r)) * self.recip_sqrt_spp) - 0.5;
         (px, py)
     }
     pub fn defocus_disk_sample(&self, r: &mut SmallRng) -> Point {
@@ -239,7 +239,7 @@ impl Camera {
         if depth == 0 {
             return Color::splat(0.);
         }
-        if let Some(record) = world.hit(r, Interval::new(0.001, f64::INFINITY)) {
+        if let Some(record) = world.hit(r, Interval::new(0.001, f32::INFINITY)) {
             let color_from_emission = record.material.emitted(&r, &record, record.point);
             color_from_emission.assert_finite();
             let Some(srec) = record.material.scatter(rng, &r, &record) else {

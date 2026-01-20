@@ -73,7 +73,7 @@ impl<L: Object> Scene<L> {
 
 fn time_per(time: Duration, desc: &str) -> String {
     if time <= Duration::from_secs(1) {
-        format!("{desc}s per second: {}", 1.0 / time.as_secs_f64())
+        format!("{desc}s per second: {}", 1.0 / time.as_secs_f32())
     } else {
         format!("time per {desc}: {time:?}")
     }

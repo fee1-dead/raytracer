@@ -1,4 +1,4 @@
-use core::f64::consts::{FRAC_1_PI, PI};
+use core::f32::consts::{FRAC_1_PI, PI};
 
 use rand::Rng;
 use rand::rngs::SmallRng;
@@ -8,7 +8,7 @@ use crate::onb::Onb;
 use crate::vec3::{Point, Vec3};
 
 pub trait Pdf {
-    fn value(&self, direction: Vec3) -> f64;
+    fn value(&self, direction: Vec3) -> f32;
     fn generate(&self, r: &mut SmallRng) -> Vec3;
 }
 
@@ -18,7 +18,7 @@ pub enum AnyPdf {
 }
 
 impl Pdf for AnyPdf {
-    fn value(&self, direction: Vec3) -> f64 {
+    fn value(&self, direction: Vec3) -> f32 {
         match self {
             Self::Cosine(c) => c.value(direction),
             Self::Sphere(s) => s.value(direction)
@@ -35,7 +35,7 @@ impl Pdf for AnyPdf {
 pub struct SpherePdf;
 
 impl Pdf for SpherePdf {
-    fn value(&self, _: Vec3) -> f64 {
+    fn value(&self, _: Vec3) -> f32 {
         1. / (4. * PI)
     }
     fn generate(&self, r: &mut SmallRng) -> Vec3 {
@@ -52,9 +52,9 @@ impl CosinePdf {
 }
 
 impl Pdf for CosinePdf {
-    fn value(&self, direction: Vec3) -> f64 {
+    fn value(&self, direction: Vec3) -> f32 {
         let cosine_theta = direction.unit_vector().dot(self.0.w());
-        0.0f64.max(cosine_theta * FRAC_1_PI)
+        0.0f32.max(cosine_theta * FRAC_1_PI)
     }
     fn generate(&self, r: &mut SmallRng) -> Vec3 {
         self.0.transform(Point::random_cosine_direction(r))
@@ -73,7 +73,7 @@ impl<T: Object> ObjectPdf<T> {
 }
 
 impl<T: Object> Pdf for ObjectPdf<T> {
-    fn value(&self, direction: Vec3) -> f64 {
+    fn value(&self, direction: Vec3) -> f32 {
         self.object.pdf_value(self.origin, direction)
     }
     fn generate(&self, r: &mut SmallRng) -> Vec3 {
@@ -90,7 +90,7 @@ impl<A: Pdf, B: Pdf> MixturePdf<A, B> {
 }
  
 impl<A: Pdf, B: Pdf> Pdf for MixturePdf<A, B> {
-    fn value(&self, direction: Vec3) -> f64 {
+    fn value(&self, direction: Vec3) -> f32 {
         0.5*self.0.value(direction) + 0.5*self.1.value(direction)
     }
     fn generate(&self, r: &mut SmallRng) -> Vec3 {

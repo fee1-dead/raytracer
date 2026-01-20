@@ -7,12 +7,12 @@ use crate::Float;
 pub struct ColorToken;
 
 impl Vec3Token for ColorToken {
-    type Data = f64;
+    type Data = f32;
 }
 
 pub type Color = Vec3<ColorToken>;
 
-fn linear_to_gamma(linear_component: f64) -> f64 {
+fn linear_to_gamma(linear_component: f32) -> f32 {
     if linear_component > 0.0 {
         linear_component.sqrt()
     } else {
@@ -31,8 +31,8 @@ impl Color {
     }
 }
 
-impl From<(f64, f64, f64)> for Color {
-    fn from((x, y, z): (f64, f64, f64)) -> Self {
+impl From<(f32, f32, f32)> for Color {
+    fn from((x, y, z): (f32, f32, f32)) -> Self {
         Self::new(x, y, z)
     }
 }

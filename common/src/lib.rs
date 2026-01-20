@@ -27,21 +27,21 @@ pub trait Float: Copy + Sized {
     fn powi(self, n: i32) -> Self;
 }
 
-impl Float for f64 {
+impl Float for f32 {
     fn cos(self) -> Self {
-        libm::cos(self)
+        libm::cosf(self)
     }
     fn sin(self) -> Self {
-        libm::sin(self)
+        libm::sinf(self)
     }
     fn tan(self) -> Self {
-        libm::tan(self)
+        libm::tanf(self)
     }
     fn sqrt(self) -> Self {
-        libm::sqrt(self)
+        libm::sqrtf(self)
     }
     fn powi(self, n: i32) -> Self {
-        libm::pow(self, n as f64)
+        libm::powf(self, n as f32)
     }
 }
 
