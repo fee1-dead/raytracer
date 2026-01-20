@@ -1,4 +1,4 @@
 /target
 image.ppm
 image*.png
-shim
+.direnv

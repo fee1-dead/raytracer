@@ -52,14 +52,22 @@ fn gpu_main() -> color_eyre::Result<()> {
     use std::fs;
 
     use common::object::AnyObject;
-    use cust::launch;
+    use cust::prelude::Context;
+    use cust::{CudaFlags, launch};
     use cust::memory::{CopyDestination, DeviceBuffer, UnifiedPointer};
     use cust::module::Module;
     use cust::stream::{Stream, StreamFlags};
 
-    let _ctx = cust::quick_init()?;
+    let x = unsafe { cust::sys::cuInit(0) };
+    println!("{x:?}");
+    cust::init(CudaFlags::empty()).unwrap();
+
+
+    println!("1");
 
     let device = cust::device::Device::get_device(0)?;
+    let _ctx = Context::new(device).unwrap();
+    println!("2");
     println!("Device Name: {}", device.name()?);
 
     let scene = scenes::cornell_box_testing();
