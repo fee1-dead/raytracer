@@ -85,6 +85,7 @@ pub enum AnyObject {
 
 macro_rules! forward_object_fn {
     (fn $name:ident(&self$(, $($n:ident: $T:ty),*  $(,)?)?) -> $ret:ty) => {
+        #[inline(never)]
         fn $name(&self$(, $($n: $T,)* )?) -> $ret {
             match self {
                 AnyObject::Dummy(x) => x.$name($($( $n, )*)?),
@@ -160,6 +161,7 @@ impl<T: Object> Translate<T> {
 }
 
 impl<T: Object> Object for Translate<T> {
+    #[inline(never)]
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
         let offset_r = Ray {
             origin: r.origin - self.offset,
@@ -225,6 +227,7 @@ impl<T: Object> RotateY<T> {
 
 impl<T: Object> Object for RotateY<T> {
     #[rustfmt::skip]
+    #[inline(never)]
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
         let Ray { mut origin, mut direction } = r;
         origin.0 = self.cos_theta*r.origin.0 - self.sin_theta*r.origin.2;
@@ -285,6 +288,7 @@ impl Sphere {
 }
 
 impl Object for Sphere {
+    #[inline(never)]
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
         let Sphere {
             center,
@@ -367,6 +371,7 @@ impl Triangle {
 
 impl Object for Triangle {
     // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
+    #[inline(never)]
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
         let e1 = self.b - self.a;
         let e2 = self.c - self.a;
@@ -453,6 +458,7 @@ impl Quad {
 }
 
 impl Object for Quad {
+    #[inline(never)]
     fn hit(&self, r: Ray, ray_t: Interval) -> Option<HitRecord> {
         let denom = self.normal.dot(r.direction);
 

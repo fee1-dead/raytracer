@@ -47,6 +47,7 @@ pub struct BvhNode {
 }
 
 impl Object for BvhNode {
+    #[inline(never)]
     fn hit(&self, r: Ray, mut ray_t: Interval) -> Option<HitRecord> {
         if !self.bbox.hit(r, ray_t) {
             return None;

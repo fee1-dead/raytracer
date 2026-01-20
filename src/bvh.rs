@@ -63,6 +63,7 @@ impl BvhNode {
         BvhNode { left, right, bbox }
     }
 
+    /*
     pub fn make_ffi_bvh_from_objects(objects: &mut Vec<AnyObject>) -> ffi::BvhNode {
         let mut bbox = AxisAlignedBoundingBox::EMPTY;
         for obj in objects.iter_mut() {
@@ -108,7 +109,7 @@ impl BvhNode {
         };
 
         ffi::BvhNode { left, right, bbox }
-    }
+    }*/
 }
 
 impl From<Vec<Box<dyn Object>>> for BvhNode {

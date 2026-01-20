@@ -70,9 +70,9 @@ impl ObjectList {
         ffi::ObjectList { objects: crate::finalize_vec(self.objects), aabb: self.aabb }
     }
 
-    pub fn finalize_as_bvh(mut self) -> ffi::BvhNode {
+    /*pub fn finalize_as_bvh(mut self) -> ffi::BvhNode {
         BvhNode::make_ffi_bvh_from_objects(&mut self.objects)
-    }
+    }*/
 }
 
 impl Object for ObjectList {

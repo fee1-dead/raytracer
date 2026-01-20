@@ -73,7 +73,7 @@ fn gpu_main() -> color_eyre::Result<()> {
     let scene = scenes::cornell_box_testing();
     let cam = finalize(scene.camera);
     let cam = unsafe { UnifiedPointer::wrap(cam as *const _ as *mut ()) };
-    let world = finalize(AnyObject::from(scene.world.finalize_as_bvh()));
+    let world = finalize(AnyObject::from(scene.world.finalize()));
     let world = unsafe { UnifiedPointer::wrap(world as *const _ as *mut ()) };
     let light = finalize(AnyObject::from(scene.light));
     let light = unsafe { UnifiedPointer::wrap(light as *const _ as *mut ()) };
@@ -82,11 +82,13 @@ fn gpu_main() -> color_eyre::Result<()> {
     )?)?;
     let buf: DeviceBuffer<u8> = unsafe { DeviceBuffer::uninitialized(5000 * 5000 * 3) }?;
     let buf_ptr = buf.as_device_ptr();
+    println!("{buf_ptr:p}");
     let module = Module::from_ptx_cstr(&ptx, &[])?;
     let stream = Stream::new(StreamFlags::NON_BLOCKING, None)?;
     unsafe {
         launch! {
-            module.raytrace<<<  (313,313,1), (16,16,1), 0, stream >>>(cam, world, light, buf_ptr)
+            // module.raytrace<<<  (313,313,1), (16,16,1), 0, stream >>>(cam, world, light, buf_ptr)
+            module.raytrace<<<  (1,1,1), (1,1,1), 0, stream >>>(cam, world, light, buf_ptr)
         }
     }?;
     stream.synchronize()?;
