@@ -81,7 +81,7 @@ pub fn cornell_box_testing() -> Scene<Quad> {
 
     let camera = CameraBuilder::new()
         .aspect_ratio(1.0)
-        .image_width(5000)
+        .image_width(1024)
         .samples_per_pixel(30)
         .max_depth(50)
         .background(Color::new(0.0, 0.0, 0.0))

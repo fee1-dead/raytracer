@@ -20,6 +20,11 @@ fn finalize<T: Copy>(x: T) -> &'static T {
     }
 }
 
+#[cfg(not(feature = "gpu"))]
+fn finalize_vec<T>(x: Vec<T>) -> &'static [T] {
+    Box::leak(x.into_boxed_slice())
+}
+
 #[cfg(feature = "gpu")]
 fn finalize_vec<T: Copy>(x: Vec<T>) -> &'static [T] {
     // gosh i hope this doesn't crash
@@ -52,6 +57,7 @@ fn gpu_main() -> color_eyre::Result<()> {
     use std::fs;
 
     use common::object::AnyObject;
+    use cust::context::{CurrentContext, ResourceLimit};
     use cust::prelude::Context;
     use cust::{CudaFlags, launch};
     use cust::memory::{CopyDestination, DeviceBuffer, UnifiedPointer};
@@ -68,7 +74,11 @@ fn gpu_main() -> color_eyre::Result<()> {
     let device = cust::device::Device::get_device(0)?;
     let _ctx = Context::new(device).unwrap();
     println!("2");
-    println!("Device Name: {}", device.name()?);
+    let ss = CurrentContext::get_resource_limit(ResourceLimit::StackSize).unwrap();
+    println!("Device Name: {}; default stack size: {ss}", device.name()?);
+
+    // 32 KiB of stack
+    CurrentContext::set_resource_limit(ResourceLimit::StackSize, 1024*32);
 
     let scene = scenes::cornell_box_testing();
     let cam = finalize(scene.camera);
@@ -80,26 +90,26 @@ fn gpu_main() -> color_eyre::Result<()> {
     let ptx = CString::new(fs::read_to_string(
         "target/nvptx64-nvidia-cuda/release/common.ptx",
     )?)?;
-    let buf: DeviceBuffer<u8> = unsafe { DeviceBuffer::uninitialized(5000 * 5000 * 3) }?;
+    let buf: DeviceBuffer<u8> = unsafe { DeviceBuffer::uninitialized(1024*1024 * 3) }?;
     let buf_ptr = buf.as_device_ptr();
     println!("{buf_ptr:p}");
     let module = Module::from_ptx_cstr(&ptx, &[])?;
     let stream = Stream::new(StreamFlags::NON_BLOCKING, None)?;
     unsafe {
         launch! {
-            // module.raytrace<<<  (313,313,1), (16,16,1), 0, stream >>>(cam, world, light, buf_ptr)
-            module.raytrace<<<  (1,1,1), (1,1,1), 0, stream >>>(cam, world, light, buf_ptr)
+            module.raytrace<<<  (64,64,1), (16,16,1), 0, stream >>>(cam, world, light, buf_ptr)
+            // module.raytrace<<<  (1,1,1), (1,1,1), 0, stream >>>(cam, world, light, buf_ptr)
         }
     }?;
     stream.synchronize()?;
-    let mut outbuf = vec![0; 5000*5000*3];
+    let mut outbuf = vec![0; 1024*1024*3];
     buf.copy_to(&mut outbuf)?;
     drop(buf);
     image::save_buffer(
             "./image_gpu.png",
             &outbuf,
-            5000,
-            5000,
+            1024,
+            1024,
             image::ColorType::Rgb8,
     )?;
     Ok(())

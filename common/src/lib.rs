@@ -88,20 +88,16 @@ pub unsafe extern "gpu-kernel" fn raytrace(
     let i = unsafe { _block_dim_x() * _block_idx_x() + _thread_idx_x() };
     let j = unsafe { _block_dim_y() * _block_idx_y() + _thread_idx_y() };
 
-    cuda_printf!("kernel launched with i={i}, j={j}!\n");
+    // cuda_printf!("kernel launched with i={i}, j={j}!\n");
 
     let camera = unsafe { &*camera.cast::<Camera>() };
     let world = unsafe { &*world.cast::<AnyObject>() };
     let lights = unsafe { &*lights.cast::<AnyObject>() };
-
-    if i as u64 >= camera.image_width || j as u64 >= camera.image_height {
-        return;
-    }
     
-    let mut rng = SmallRng::seed_from_u64(42);
+    let mut rng = SmallRng::seed_from_u64((i as u64)*1024 + j as u64);
     let c = camera.render_single(&mut rng, world, lights, i as u64, j as u64);
-    let offset = i * 3 + j * 3 * 5000;
-    cuda_printf!("offset={offset}!\n");
+    let offset = i * 3 + j * 3 * 1024;
+    // cuda_printf!("offset={offset}!\n");
     c.write_to_buf(unsafe { core::slice::from_raw_parts_mut(out.offset(offset as isize), 3) });
 }
 
