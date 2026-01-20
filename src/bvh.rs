@@ -53,8 +53,8 @@ impl BvhNode {
                 }));
                 let mid = objects.len() / 2;
                 let mut right = objects.split_off(mid);
-                let mut left = objects;
-                let a1: Arc<dyn Object> = Arc::new(BvhNode::from_objects_mut(&mut left));
+                let left = objects;
+                let a1: Arc<dyn Object> = Arc::new(BvhNode::from_objects_mut(left));
                 let a2: Arc<dyn Object> = Arc::new(BvhNode::from_objects_mut(&mut right));
                 [a1, a2]
             }
@@ -101,7 +101,7 @@ impl BvhNode {
                 let mid = objects.len() / 2;
                 let mut right = objects.split_off(mid);
                 let mut left = objects;
-                let a1 = crate::finalize(BvhNode::make_ffi_bvh_from_objects(&mut left).into());
+                let a1 = crate::finalize(BvhNode::make_ffi_bvh_from_objects(left).into());
                 let a2 = crate::finalize(BvhNode::make_ffi_bvh_from_objects(&mut right).into());
                 [a1, a2]
             }

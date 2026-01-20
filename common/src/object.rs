@@ -235,7 +235,7 @@ impl<T: Object> Object for RotateY<T> {
 
         let rotated_r = Ray { origin, direction };
 
-        let Some(mut rec) = self.object.hit(rotated_r, ray_t) else { return None; };
+        let mut rec = self.object.hit(rotated_r, ray_t)?;
 
         let mut p = rec.point;
         p.0 =  self.cos_theta*rec.point.0 + self.sin_theta*rec.point.2;

@@ -169,7 +169,7 @@ impl Camera {
         let mut pixel_color = Color::new(0.0, 0.0, 0.0);
         for s_i in 0..self.sqrt_spp {
             for s_j in 0..self.sqrt_spp {
-                let ray = self.get_ray(rng, i as u64, j as u64, s_i, s_j);
+                let ray = self.get_ray(rng, i, j, s_i, s_j);
                 pixel_color += self.ray_color(rng, ray, self.max_depth, &world, &lights);
                 pixel_color.assert_finite();
             }
@@ -183,7 +183,7 @@ impl Camera {
             ..
         } = self;
 
-        assert_eq!(self.buffer_len() as usize, buf.len());
+        assert_eq!(self.buffer_len(), buf.len());
 
         // todo: figure out per thread small rng once gpu transitioned
         let mut rng = SmallRng::seed_from_u64(42);
