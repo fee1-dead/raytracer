@@ -13,45 +13,35 @@
     };
     # Change according to the driver used: stable, beta
     nvidiaPackage = pkgs.linuxPackages.nvidiaPackages.beta;
-    # Make find-cuda-helper happy on nix
-    lib64Shim = pkgs.runCommand "lib64-shim" {} ''
-      mkdir -p $out
-      ln -s ${pkgs.cudaPackages_13.cudatoolkit}/lib $out/lib64
-    '';
   in {
-    devShells.${system}.default = pkgs.mkShell {
+    devShells.${system}.default = pkgs.mkShell rec  {
       buildInputs = with pkgs; [
-        ffmpeg
-        fmt.dev
+        gcc
         cudaPackages_13.cuda_cudart
         cudaPackages_13.cudatoolkit
         nvidiaPackage
         cudaPackages_13.cudnn
-        libGLU
         libGL
         xorg.libXi
         xorg.libXmu
-        freeglut
         xorg.libXext
         xorg.libX11
         xorg.libXv
         xorg.libXrandr
-        zlib
-        ncurses
-        stdenv.cc
-        binutils
-        uv
       ];
 
+      LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+      LD_LIBRARY_PATH = "${nvidiaPackage}/lib:$LD_LIBRARY_PATH";
+      CUDA_PATH = "${pkgs.cudaPackages_13.cudatoolkit}";
       shellHook = ''
-        export LD_LIBRARY_PATH="${nvidiaPackage}/lib:$LD_LIBRARY_PATH"
-        export CUDA_PATH=${pkgs.cudaPackages_13.cudatoolkit}
-        export CUDA_LIBRARY_PATH=${lib64Shim}
-        export EXTRA_LDFLAGS="-L/lib -L${nvidiaPackage}/lib"
-        export EXTRA_CCFLAGS="-I/usr/include"
-        export CMAKE_PREFIX_PATH="${pkgs.fmt.dev}:$CMAKE_PREFIX_PATH"
-        export PKG_CONFIG_PATH="${pkgs.fmt.dev}/lib/pkgconfig:$PKG_CONFIG_PATH"
-      '';
+        export BINDGEN_EXTRA_CLANG_ARGS="$(< ${pkgs.stdenv.cc}/nix-support/libc-crt1-cflags) \
+          $(< ${pkgs.stdenv.cc}/nix-support/libc-cflags) \
+          $(< ${pkgs.stdenv.cc}/nix-support/cc-cflags) \
+          $(< ${pkgs.stdenv.cc}/nix-support/libcxx-cxxflags) \
+          ${pkgs.lib.optionalString pkgs.stdenv.cc.isClang "-idirafter ${pkgs.stdenv.cc.cc}/lib/clang/${pkgs.lib.getVersion pkgs.stdenv.cc.cc}/include"} \
+          ${pkgs.lib.optionalString pkgs.stdenv.cc.isGNU "-isystem ${pkgs.stdenv.cc.cc}/include/c++/${pkgs.lib.getVersion pkgs.stdenv.cc.cc} -isystem ${pkgs.stdenv.cc.cc}/include/c++/${pkgs.lib.getVersion pkgs.stdenv.cc.cc}/${pkgs.stdenv.hostPlatform.config}"}
+        "
+      '';      
     };
   };
 }

@@ -64,8 +64,6 @@ fn gpu_main() -> color_eyre::Result<()> {
     use cust::module::Module;
     use cust::stream::{Stream, StreamFlags};
 
-    let x = unsafe { cust::sys::cuInit(0) };
-    println!("{x:?}");
     cust::init(CudaFlags::empty()).unwrap();
 
 

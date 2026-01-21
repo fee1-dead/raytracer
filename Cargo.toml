@@ -15,7 +15,7 @@ image = { version = "0.25.2", default-features = false, features = ["png", "rayo
 rand.workspace = true
 rayon = "1.10.0"
 common = { path = "common" }
-cust = { version = "0.3.2", optional = true }
+cust = { git = "https://github.com/Rust-GPU/rust-cuda", rev = "f76a23215fd638a391626c2075b30e3f655c7c09", optional = true }
 
 [profile.release]
 codegen-units = 1
